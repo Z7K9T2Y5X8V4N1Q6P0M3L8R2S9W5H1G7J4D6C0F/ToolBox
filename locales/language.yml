@@ -1,0 +1,4 @@
+_version: 2
+TEST_MESSAGE:
+  en-US: "Test Message"
+  zh-CN: "测试信息"

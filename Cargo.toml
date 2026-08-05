@@ -8,9 +8,24 @@ pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = 0 }
 unwrap_used = { level = "deny", priority = 1 }
 
+[package.metadata.i18n]
+available-locales = [ "en-US", "zh-CN" ]
+default-locale = "en-US"
+load-path = "locales"
+
 [dependencies.winsafe]
 version = "0.0.28"
 features = ["gui"]
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    "Win32_Graphics_Dwm",
+    "Win32_UI_Controls",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+    "Win32_Foundation",
+]
 
 [dependencies]
 rust-i18n = "4.2.1"

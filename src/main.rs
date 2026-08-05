@@ -1,4 +1,10 @@
 #![windows_subsystem = "windows"]
+i18n!("locales", fallback = "en-US");
+
+use rust_i18n::i18n;
+use winsafe::prelude::{GuiEventsParent, GuiWindow};
+
+mod ui;
 
 #[derive(Clone)]
 pub struct MainWindow {
@@ -7,9 +13,10 @@ pub struct MainWindow {
 
 impl MainWindow {
     pub fn create_and_run() -> winsafe::AnyResult<i32> {
+        ui::ui_customization_hook::install_ui_customization_hook();
+
         let main_window = winsafe::gui::WindowMain::new(winsafe::gui::WindowMainOpts {
             title: "TOOLBOX",
-            size: winsafe::gui::dpi(300, 150),
             ..Default::default()
         });
 
@@ -19,7 +26,13 @@ impl MainWindow {
         main_window_instance.main_window.run_main(None)
     }
 
-    fn events(&self) {}
+    fn events(&self) {
+        let cloned_main_window_instance = self.clone();
+        self.main_window.on().wm_create(move |_| {
+            ui::window_utils::center_window(cloned_main_window_instance.main_window.hwnd())?;
+            Ok(0)
+        });
+    }
 }
 
 fn main() {

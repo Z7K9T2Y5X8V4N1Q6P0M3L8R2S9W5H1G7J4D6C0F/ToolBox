@@ -4,6 +4,7 @@ i18n!("locales", fallback = "en-US");
 use rust_i18n::i18n;
 use winsafe::prelude::{GuiEventsParent, GuiWindow};
 
+mod config;
 mod ui;
 
 #[derive(Clone)]
@@ -14,6 +15,9 @@ pub struct MainWindow {
 impl MainWindow {
     pub fn create_and_run() -> winsafe::AnyResult<i32> {
         ui::ui_customization_hook::install_ui_customization_hook();
+
+        let app_config = config::AppConfig::load();
+        rust_i18n::set_locale(&app_config.language);
 
         let main_window = winsafe::gui::WindowMain::new(winsafe::gui::WindowMainOpts {
             title: "TOOLBOX",

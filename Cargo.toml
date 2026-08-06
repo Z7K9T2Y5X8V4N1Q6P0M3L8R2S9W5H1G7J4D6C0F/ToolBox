@@ -3,29 +3,33 @@ name = "TOOLBOX"
 version = "0.1.0"
 edition = "2024"
 
-[lints.clippy]
-pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = 0 }
-unwrap_used = { level = "deny", priority = 1 }
-
 [package.metadata.i18n]
-available-locales = [ "en-US", "zh-CN" ]
+available-locales = ["en-US", "zh-CN"]
 default-locale = "en-US"
 load-path = "locales"
+
+[dependencies]
+anyhow = "1.0.104"
+dirs = "6.0.0"
+rust-i18n = "4.2.1"
+serde = { version = "1.0.229", features = ["derive"] }
+toml = "1.1.4"
+
+[dependencies.windows]
+version = "0.58"
+features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Dwm",
+  "Win32_System_Threading",
+  "Win32_UI_Controls",
+  "Win32_UI_WindowsAndMessaging",
+]
 
 [dependencies.winsafe]
 version = "0.0.28"
 features = ["gui"]
 
-[dependencies.windows]
-version = "0.58"
-features = [
-    "Win32_Graphics_Dwm",
-    "Win32_UI_Controls",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_System_Threading",
-    "Win32_Foundation",
-]
-
-[dependencies]
-rust-i18n = "4.2.1"
+[lints.clippy]
+nursery = { level = "warn", priority = 0 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = { level = "deny", priority = 1 }

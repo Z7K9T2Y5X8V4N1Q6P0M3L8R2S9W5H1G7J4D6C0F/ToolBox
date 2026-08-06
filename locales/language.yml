@@ -14,3 +14,15 @@ MENU_OPTIONS_RESTART_EXPLORER:
 MENU_LANGUAGE:
   en-US: "🌏Language"
   zh-CN: "🌏语言"
+
+FATAL_ERROR_TITLE:
+  en-US: "Fatal Error"
+  zh-CN: "程序崩溃"
+
+FATAL_ERROR_CONTENT:
+  en-US: "An unexpected error occurred:\n\n%{error}"
+  zh-CN: "发生了意料之外的错误：\n\n%{error}"
+
+FATAL_ERROR_UNKNOWN_ERROR:
+  en-US: "Unknown error"
+  zh-CN: "未知错误"

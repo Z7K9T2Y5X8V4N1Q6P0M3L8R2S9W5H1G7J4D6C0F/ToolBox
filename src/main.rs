@@ -27,9 +27,15 @@ impl MainWindow {
     }
 
     fn events(&self) {
+        ui::menu::register_menu_events(self);
+
         let cloned_main_window_instance = self.clone();
         self.main_window.on().wm_create(move |_| {
-            ui::window_utils::center_window(cloned_main_window_instance.main_window.hwnd())?;
+            let main_window_hwnd = cloned_main_window_instance.main_window.hwnd();
+            let main_menu_bar = ui::menu::build_main_menu()?;
+
+            main_window_hwnd.SetMenu(&main_menu_bar)?;
+            ui::window_utils::center_window(main_window_hwnd)?;
             Ok(0)
         });
     }

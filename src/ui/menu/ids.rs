@@ -1,0 +1,4 @@
+pub const IDM_OPTIONS_RESTART_EXPLORER: u16 = 1001;
+
+pub const IDM_LANG_EN_US: u16 = 2001;
+pub const IDM_LANG_ZH_CN: u16 = 2002;

@@ -2,3 +2,15 @@ _version: 2
 TEST_MESSAGE:
   en-US: "Test Message"
   zh-CN: "测试信息"
+
+MENU_OPTIONS:
+  en-US: "⚙Options"
+  zh-CN: "⚙选项"
+
+MENU_OPTIONS_RESTART_EXPLORER:
+  en-US: "Restart File Explorer"
+  zh-CN: "重启文件资源管理器"
+
+MENU_LANGUAGE:
+  en-US: "🌏Language"
+  zh-CN: "🌏语言"

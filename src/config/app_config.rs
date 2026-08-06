@@ -41,7 +41,11 @@ impl AppConfig {
             }
             ConfigLoadResult::ParseFailed(parse_error) => {
                 eprintln!("配置文件解析失败，使用默认配置: {parse_error}");
-                Self::default()
+                let default_config = Self::default();
+                if let Err(save_error) = default_config.save() {
+                    eprintln!("默认配置保存失败: {save_error}");
+                }
+                default_config
             }
         }
     }

@@ -1,3 +1,4 @@
+use rust_i18n::t;
 use winsafe::{HMENU, MenuItem};
 
 use super::ids::IDM_OPTIONS_RESTART_EXPLORER;
@@ -9,12 +10,12 @@ pub fn build_main_menu() -> winsafe::AnyResult<HMENU> {
     let options_popup_menu = HMENU::CreatePopupMenu()?;
     options_popup_menu.append_item(&[MenuItem::Entry {
         cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
-        text: "重启文件资源管理器",
+        text: &t!("MENU_OPTIONS_RESTART_EXPLORER"),
     }])?;
 
     main_menu_bar.append_item(&[MenuItem::Submenu {
         submenu: &options_popup_menu,
-        text: "选项",
+        text: &t!("MENU_OPTIONS"),
     }])?;
 
     let language_popup_menu = HMENU::CreatePopupMenu()?;
@@ -31,7 +32,7 @@ pub fn build_main_menu() -> winsafe::AnyResult<HMENU> {
 
     main_menu_bar.append_item(&[MenuItem::Submenu {
         submenu: &language_popup_menu,
-        text: "语言",
+        text: &t!("MENU_LANGUAGE"),
     }])?;
 
     Ok(main_menu_bar)

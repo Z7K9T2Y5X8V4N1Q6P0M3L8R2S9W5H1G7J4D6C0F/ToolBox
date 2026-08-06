@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use winsafe::prelude::Handle;
 
 use crate::config::ConfigLoadResult;
 
@@ -35,15 +37,36 @@ impl AppConfig {
             ConfigLoadResult::Loaded(parsed_config) => parsed_config,
             ConfigLoadResult::NotFound(default_config) => {
                 if let Err(save_error) = default_config.save() {
-                    eprintln!("默认配置保存失败: {save_error}");
+                    winsafe::HWND::NULL
+                        .MessageBox(
+                            &t!("CONFIG_SAVE_DEFAULT_FAILED", save_error = save_error),
+                            &t!("ERROR"),
+                            winsafe::co::MB::OK | winsafe::co::MB::ICONERROR,
+                        )
+                        .ok();
                 }
                 default_config
             }
             ConfigLoadResult::ParseFailed(parse_error) => {
-                eprintln!("配置文件解析失败，使用默认配置: {parse_error}");
+                winsafe::HWND::NULL
+                    .MessageBox(
+                        &t!(
+                            "CONFIG_PARSE_FAILED_USING_DEFAULT",
+                            parse_error = parse_error
+                        ),
+                        &t!("ERROR"),
+                        winsafe::co::MB::OK | winsafe::co::MB::ICONERROR,
+                    )
+                    .ok();
                 let default_config = Self::default();
                 if let Err(save_error) = default_config.save() {
-                    eprintln!("默认配置保存失败: {save_error}");
+                    winsafe::HWND::NULL
+                        .MessageBox(
+                            &t!("CONFIG_SAVE_DEFAULT_FAILED", save_error = save_error),
+                            &t!("ERROR"),
+                            winsafe::co::MB::OK | winsafe::co::MB::ICONERROR,
+                        )
+                        .ok();
                 }
                 default_config
             }
@@ -60,31 +83,42 @@ impl AppConfig {
             return ConfigLoadResult::NotFound(Self::default());
         }
 
-        let file_content = match fs::read_to_string(&config_path)
-            .with_context(|| format!("无法读取配置文件: {}", config_path.display()))
-        {
+        let file_content = match fs::read_to_string(&config_path).with_context(|| {
+            t!(
+                "CONFIG_READ_FAILED",
+                config_path = config_path.display().to_string()
+            )
+        }) {
             Ok(file_content) => file_content,
             Err(read_error) => return ConfigLoadResult::ParseFailed(read_error),
         };
 
-        match toml::from_str::<AppConfig>(&file_content).context("配置文件解析失败") {
+        match toml::from_str::<AppConfig>(&file_content).context(t!("CONFIG_PARSE_FAILED")) {
             Ok(parsed_config) => ConfigLoadResult::Loaded(parsed_config),
             Err(parse_error) => ConfigLoadResult::ParseFailed(parse_error),
         }
     }
 
     pub fn save(&self) -> Result<()> {
-        let config_path = Self::config_path().context("无法获取配置目录")?;
+        let config_path = Self::config_path().context(t!("CONFIG_DIR_NOT_FOUND"))?;
 
         if let Some(config_path_parent) = config_path.parent() {
-            fs::create_dir_all(config_path_parent)
-                .with_context(|| format!("无法创建配置目录: {}", config_path_parent.display()))?;
+            fs::create_dir_all(config_path_parent).with_context(|| {
+                t!(
+                    "CONFIG_DIR_CREATE_FAILED",
+                    config_path_parent = config_path_parent.display().to_string()
+                )
+            })?;
         }
 
         let serialized_content = toml::to_string_pretty(self).context("配置序列化失败")?;
 
-        fs::write(&config_path, serialized_content)
-            .with_context(|| format!("无法写入配置文件: {}", config_path.display()))?;
+        fs::write(&config_path, serialized_content).with_context(|| {
+            t!(
+                "CONFIG_WRITE_FAILED",
+                config_path = config_path.display().to_string()
+            )
+        })?;
 
         Ok(())
     }

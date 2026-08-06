@@ -1,8 +1,8 @@
 #![windows_subsystem = "windows"]
 i18n!("locales", fallback = "en-US");
 
-use rust_i18n::i18n;
-use winsafe::prelude::{GuiEventsParent, GuiWindow};
+use rust_i18n::{i18n, t};
+use winsafe::prelude::{GuiEventsParent, GuiWindow, Handle};
 
 mod config;
 mod error;
@@ -50,6 +50,12 @@ impl MainWindow {
 
 fn main() {
     if let Err(error) = MainWindow::create_and_run() {
-        eprintln!("{}", error);
+        winsafe::HWND::NULL
+            .MessageBox(
+                &error.to_string(),
+                &t!("ERROR"),
+                winsafe::co::MB::OK | winsafe::co::MB::ICONERROR,
+            )
+            .ok();
     }
 }

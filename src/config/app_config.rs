@@ -61,13 +61,10 @@ impl AppConfig {
                     .ok();
                 let default_config = Self::default();
                 if let Err(save_error) = default_config.save() {
-                    winsafe::HWND::NULL
-                        .MessageBox(
-                            &t!("CONFIG_SAVE_DEFAULT_FAILED", save_error = save_error),
-                            &t!("ERROR"),
-                            winsafe::co::MB::OK | winsafe::co::MB::ICONERROR,
-                        )
-                        .ok();
+                    panic!(
+                        "{}",
+                        t!("CONFIG_SAVE_DEFAULT_FAILED", save_error = save_error)
+                    );
                 }
                 default_config
             }
@@ -79,7 +76,6 @@ impl AppConfig {
             Some(config_path) => config_path,
             None => return ConfigLoadResult::NotFound(Self::default()),
         };
-
         if !config_path.exists() {
             return ConfigLoadResult::NotFound(Self::default());
         }

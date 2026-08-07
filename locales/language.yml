@@ -24,24 +24,24 @@ FATAL_ERROR_TITLE:
   zh-CN: "程序崩溃"
 
 FATAL_ERROR_CONTENT:
-  en-US: "An unexpected error occurred: %{error}"
-  zh-CN: "发生了意料之外的错误: %{error}"
+  en-US: "An unexpected error occurred:\n%{error}"
+  zh-CN: "发生了意料之外的错误:\n%{error}"
 
 FATAL_ERROR_UNKNOWN_ERROR:
   en-US: "Unknown error"
   zh-CN: "未知错误"
 
 CONFIG_SAVE_DEFAULT_FAILED:
-  en-US: "Failed to save default config: %{save_error}"
-  zh-CN: "默认配置保存失败: %{save_error}"
+  en-US: "Failed to save default config:\n%{save_error}"
+  zh-CN: "默认配置保存失败:\n%{save_error}"
 
 CONFIG_PARSE_FAILED_USING_DEFAULT:
-  en-US: "Failed to parse config, using default: %{parse_error}"
-  zh-CN: "配置文件解析失败，使用默认配置: %{parse_error}"
+  en-US: "Failed to parse config, using default:\n%{parse_error}"
+  zh-CN: "配置文件解析失败，使用默认配置:\n%{parse_error}"
 
 CONFIG_READ_FAILED:
-  en-US: "Failed to read config file: %{config_path}"
-  zh-CN: "无法读取配置文件: %{config_path}"
+  en-US: "Failed to read config file:\n%{config_path}"
+  zh-CN: "无法读取配置文件:\n%{config_path}"
 
 CONFIG_PARSE_FAILED:
   en-US: "Failed to parse config file"
@@ -52,13 +52,13 @@ CONFIG_DIR_NOT_FOUND:
   zh-CN: "无法获取配置目录"
 
 CONFIG_DIR_CREATE_FAILED:
-  en-US: "Failed to create config directory: %{config_path_parent}"
-  zh-CN: "无法创建配置目录: %{config_path_parent}"
+  en-US: "Failed to create config directory:\n%{config_path_parent}"
+  zh-CN: "无法创建配置目录:\n%{config_path_parent}"
 
 CONFIG_SERIALIZE_FAILED:
   en-US: "Failed to serialize config"
   zh-CN: "配置序列化失败"
 
 CONFIG_WRITE_FAILED:
-  en-US: "Failed to write config file: %{config_path}"
-  zh-CN: "无法写入配置文件: %{config_path}"
+  en-US: "Failed to write config file:\n%{config_path}"
+  zh-CN: "无法写入配置文件:\n%{config_path}"

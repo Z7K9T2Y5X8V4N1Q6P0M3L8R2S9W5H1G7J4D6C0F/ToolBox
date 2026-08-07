@@ -4,6 +4,8 @@ i18n!("locales", fallback = "en-US");
 use rust_i18n::{i18n, t};
 use winsafe::prelude::{GuiEventsParent, GuiWindow, Handle};
 
+use crate::config::AppLanguage;
+
 mod config;
 mod error;
 mod ui;
@@ -15,12 +17,15 @@ pub struct MainWindow {
 
 impl MainWindow {
     pub fn create_and_run() -> winsafe::AnyResult<i32> {
-        rust_i18n::set_locale(&sys_locale::get_locale().unwrap_or_else(|| "en-US".to_string()));
+        rust_i18n::set_locale(
+            &sys_locale::get_locale()
+                .unwrap_or_else(|| AppLanguage::EnUs.as_locale_str().to_string()),
+        );
         ui::ui_customization_hook::install_ui_customization_hook();
         error::panic_hook::install_panic_hook();
 
         let app_config = config::AppConfig::load();
-        rust_i18n::set_locale(&app_config.language);
+        rust_i18n::set_locale(&app_config.language.as_locale_str());
 
         let main_window = winsafe::gui::WindowMain::new(winsafe::gui::WindowMainOpts {
             title: "TOOLBOX",

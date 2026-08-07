@@ -5,19 +5,20 @@ use std::fs;
 use std::path::PathBuf;
 use winsafe::prelude::Handle;
 
+use crate::config::AppLanguage;
 use crate::config::ConfigLoadResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct AppConfig {
-    pub language: String,
+    pub language: AppLanguage,
     pub disclaimer_accepted: bool,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            language: "en-US".to_string(),
+            language: AppLanguage::default(),
             disclaimer_accepted: false,
         }
     }
@@ -111,7 +112,8 @@ impl AppConfig {
             })?;
         }
 
-        let serialized_content = toml::to_string_pretty(self).context("配置序列化失败")?;
+        let serialized_content =
+            toml::to_string_pretty(self).context(t!("CONFIG_SERIALIZE_FAILED"))?;
 
         fs::write(&config_path, serialized_content).with_context(|| {
             t!(

@@ -24,7 +24,6 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
 
             Ok(())
         });
-
     let cloned_main_window_instance_for_en = main_window_instance.clone();
     main_window_instance
         .main_window

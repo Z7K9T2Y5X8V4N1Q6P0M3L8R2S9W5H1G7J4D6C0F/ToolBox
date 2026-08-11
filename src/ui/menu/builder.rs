@@ -29,20 +29,15 @@ pub fn build_main_menu() -> winsafe::AnyResult<HMENU> {
 
 fn append_language_menu_items(language_popup_menu: &HMENU) -> winsafe::AnyResult<()> {
     let current_locale = rust_i18n::locale();
-    let is_current_locale = |locale: &str| &*current_locale == locale;
+    let languages = [
+        (IDM_LANG_EN_US, "English", "en-US"),
+        (IDM_LANG_ZH_CN, "简体中文", "zh-CN"),
+    ];
 
-    append_language_entry(
-        language_popup_menu,
-        IDM_LANG_EN_US,
-        "English",
-        is_current_locale("en-US"),
-    )?;
-    append_language_entry(
-        language_popup_menu,
-        IDM_LANG_ZH_CN,
-        "简体中文",
-        is_current_locale("zh-CN"),
-    )?;
+    for (cmd_id, display_text, locale) in languages {
+        let is_active = &*current_locale == locale;
+        append_language_entry(language_popup_menu, cmd_id, display_text, is_active)?;
+    }
 
     Ok(())
 }

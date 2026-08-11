@@ -3,6 +3,10 @@ TEST_MESSAGE:
   en-US: "Test Message"
   zh-CN: "测试信息"
 
+TOOLBOX_TITLE:
+  en-US: "ToolBox"
+  zh-CN: "工具箱"
+
 MENU_OPTIONS:
   en-US: "⚙Options"
   zh-CN: "⚙选项"
@@ -21,7 +25,7 @@ ERROR:
 
 FATAL_ERROR_TITLE:
   en-US: "Fatal Error"
-  zh-CN: "程序崩溃"
+  zh-CN: "严重错误"
 
 FATAL_ERROR_CONTENT:
   en-US: "An unexpected error occurred:\n%{error}"
@@ -62,3 +66,7 @@ CONFIG_SERIALIZE_FAILED:
 CONFIG_WRITE_FAILED:
   en-US: "Failed to write config file:\n%{config_path}"
   zh-CN: "无法写入配置文件:\n%{config_path}"
+
+CONFIG_SAVE_FAILED:
+  en-US: "Failed to save configuration:\n%{save_error}"
+  zh-CN: "保存配置失败:\n%{save_error}"

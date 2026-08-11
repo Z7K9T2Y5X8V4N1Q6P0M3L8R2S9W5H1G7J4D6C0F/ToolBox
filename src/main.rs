@@ -27,8 +27,9 @@ impl MainWindow {
         let app_config = config::AppConfig::load();
         rust_i18n::set_locale(&app_config.language.as_locale_str());
 
+        let window_title = t!("TOOLBOX_TITLE");
         let main_window = winsafe::gui::WindowMain::new(winsafe::gui::WindowMainOpts {
-            title: "TOOLBOX",
+            title: &window_title,
             ..Default::default()
         });
 

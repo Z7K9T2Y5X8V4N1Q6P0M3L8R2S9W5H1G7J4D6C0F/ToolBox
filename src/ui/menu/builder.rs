@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use rust_i18n::t;
 use winsafe::{BmpPtrStr, HMENU, IdMenu, MenuItem, co};
 
@@ -35,7 +37,7 @@ fn append_language_menu_items(language_popup_menu: &HMENU) -> winsafe::AnyResult
     ];
 
     for (cmd_id, display_text, locale) in languages {
-        let is_active = &*current_locale == locale;
+        let is_active = current_locale.deref() == locale;
         append_language_entry(language_popup_menu, cmd_id, display_text, is_active)?;
     }
 

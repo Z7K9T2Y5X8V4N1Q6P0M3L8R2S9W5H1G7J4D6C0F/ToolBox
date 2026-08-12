@@ -27,13 +27,19 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
             let mut config = AppConfig::load();
             config.language = AppLanguage::EnUs;
             if let Err(save_error) = config.save() {
-                winsafe::HWND::NULL
-                    .MessageBox(
-                        &rust_i18n::t!("CONFIG_SAVE_FAILED", save_error = save_error.to_string()),
-                        &rust_i18n::t!("ERROR"),
-                        winsafe::co::MB::OK | winsafe::co::MB::ICONWARNING,
-                    )
-                    .ok();
+                let error_message =
+                    rust_i18n::t!("CONFIG_SAVE_FAILED", save_error = save_error.to_string())
+                        .to_string();
+                *cloned_main_window_instance_for_en_us
+                    .pending_error_message
+                    .borrow_mut() = Some(error_message);
+                unsafe {
+                    main_window_hwnd.PostMessage(winsafe::msg::Wm {
+                        msg_id: winsafe::co::WM::APP,
+                        wparam: 0,
+                        lparam: 0,
+                    })?;
+                }
             }
 
             Ok(())
@@ -53,16 +59,19 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
             let mut config = AppConfig::load();
             config.language = AppLanguage::ZhCn;
             if let Err(save_error) = config.save() {
-                main_window_hwnd.EnableWindow(false);
-                main_window_hwnd
-                    .MessageBox(
-                        &rust_i18n::t!("CONFIG_SAVE_FAILED", save_error = save_error.to_string()),
-                        &rust_i18n::t!("ERROR"),
-                        winsafe::co::MB::OK | winsafe::co::MB::ICONWARNING,
-                    )
-                    .ok();
-                main_window_hwnd.EnableWindow(true);
-                main_window_hwnd.SetFocus();
+                let error_message =
+                    rust_i18n::t!("CONFIG_SAVE_FAILED", save_error = save_error.to_string())
+                        .to_string();
+                *cloned_main_window_instance_for_zh_cn
+                    .pending_error_message
+                    .borrow_mut() = Some(error_message);
+                unsafe {
+                    main_window_hwnd.PostMessage(winsafe::msg::Wm {
+                        msg_id: winsafe::co::WM::APP,
+                        wparam: 0,
+                        lparam: 0,
+                    })?;
+                }
             }
 
             Ok(())

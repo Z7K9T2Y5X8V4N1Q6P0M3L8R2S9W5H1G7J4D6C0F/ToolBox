@@ -56,6 +56,7 @@ fn apply_language_change(
         let error_message =
             rust_i18n::t!("CONFIG_SAVE_FAILED", save_error = save_error).to_string();
         *main_window_instance.pending_error_message.borrow_mut() = Some(error_message);
+
         unsafe {
             main_window_hwnd.PostMessage(winsafe::msg::Wm {
                 msg_id: winsafe::co::WM::APP,

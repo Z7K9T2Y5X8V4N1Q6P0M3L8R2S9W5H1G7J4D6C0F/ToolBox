@@ -11,13 +11,21 @@ MENU_OPTIONS:
   en-US: "⚙Options"
   zh-CN: "⚙选项"
 
+MENU_LANGUAGE:
+  en-US: "🌏Language"
+  zh-CN: "🌏语言"
+
 MENU_OPTIONS_RESTART_EXPLORER:
   en-US: "Restart File Explorer"
   zh-CN: "重启文件资源管理器"
 
-MENU_LANGUAGE:
-  en-US: "🌏Language"
-  zh-CN: "🌏语言"
+TAB_SETTINGS:
+  en-US: "Settings"
+  zh-CN: "设置"
+
+TAB_WINDOW_VISUAL_STYLES:
+  en-US: "Window Visual Styles"
+  zh-CN: "窗口视觉样式"
 
 ERROR:
   en-US: "Error"

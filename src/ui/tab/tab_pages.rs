@@ -19,17 +19,15 @@ impl TabPages {
             window_visual_styles_page.clone().into(),
         ];
 
+        let tab_control_titles = Self::get_tab_control_titles();
         let tab_control = gui::Tab::new(
             parent_window,
             gui::TabOpts {
                 position: gui::dpi(10, 10),
                 size: gui::dpi(280, 480),
                 pages: &[
-                    (&t!("TAB_SETTINGS"), settings_page.into()),
-                    (
-                        &t!("TAB_WINDOW_VISUAL_STYLES"),
-                        window_visual_styles_page.into(),
-                    ),
+                    (&tab_control_titles[0], settings_page.into()),
+                    (&tab_control_titles[1], window_visual_styles_page.into()),
                 ],
                 ..Default::default()
             },
@@ -69,11 +67,11 @@ impl TabPages {
     }
 
     fn resize_current_tab_page(&self) -> winsafe::AnyResult<()> {
-        let current_index = match self.tab_control.items().selected() {
-            Some(selected_tab_item) => selected_tab_item.index() as usize,
+        let current_selected_tab_control_item_index = match self.tab_control.items().selected() {
+            Some(selected_tab_control_item) => selected_tab_control_item.index() as usize,
             None => return Ok(()),
         };
-        let target_tab_page = match self.tab_pages.get(current_index) {
+        let target_tab_page = match self.tab_pages.get(current_selected_tab_control_item_index) {
             Some(target_tab_page) => target_tab_page,
             None => return Ok(()),
         };
@@ -105,6 +103,24 @@ impl TabPages {
             },
             co::SWP::NOZORDER,
         )?;
+
+        Ok(())
+    }
+
+    fn get_tab_control_titles() -> Vec<String> {
+        vec![
+            t!("TAB_SETTINGS").to_string(),
+            t!("TAB_WINDOW_VISUAL_STYLES").to_string(),
+        ]
+    }
+
+    pub fn update_tab_control_titles(&self) -> winsafe::AnyResult<()> {
+        let tab_control_titles = Self::get_tab_control_titles();
+
+        for (tab_control_index, tab_control_title) in tab_control_titles.iter().enumerate() {
+            let target_tab_control_item = self.tab_control.items().get(tab_control_index as u32);
+            target_tab_control_item.set_text(tab_control_title)?;
+        }
 
         Ok(())
     }

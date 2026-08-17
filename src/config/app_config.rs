@@ -9,17 +9,15 @@ use crate::config::AppLanguage;
 use crate::config::ConfigLoadResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "UPPERCASE", deny_unknown_fields)]
 pub struct AppConfig {
     pub language: AppLanguage,
-    pub disclaimer_accepted: bool,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             language: AppLanguage::default(),
-            disclaimer_accepted: false,
         }
     }
 }

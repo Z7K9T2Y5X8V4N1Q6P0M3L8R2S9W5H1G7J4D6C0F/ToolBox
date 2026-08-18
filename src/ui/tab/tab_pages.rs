@@ -39,12 +39,8 @@ impl TabPages {
         }
     }
 
-    pub fn resize(
-        &self,
-        client_width: i32,
-        client_height: i32,
-        tab_control_margin: i32,
-    ) -> winsafe::AnyResult<()> {
+    pub fn resize(&self, client_width: i32, client_height: i32) -> winsafe::AnyResult<()> {
+        let tab_control_margin = gui::dpi_x(10);
         let tab_control_width = client_width - (tab_control_margin * 2);
         let tab_control_height = client_height - (tab_control_margin * 2);
 

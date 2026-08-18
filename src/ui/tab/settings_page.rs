@@ -1,10 +1,11 @@
-use winsafe::{gui, prelude::*};
+use winsafe::{co, gui, prelude::*};
 
 use crate::ui;
 
 #[derive(Clone)]
 pub struct SettingsPage {
     tab_page: gui::TabPage,
+    group_box: gui::Button,
 }
 
 impl From<SettingsPage> for gui::TabPage {
@@ -16,7 +17,21 @@ impl From<SettingsPage> for gui::TabPage {
 impl SettingsPage {
     pub fn new(parent_window: &(impl GuiParent + 'static)) -> Self {
         let tab_page = gui::TabPage::new(parent_window, gui::TabPageOpts::default());
-        let settings_page = Self { tab_page };
+        let group_box = gui::Button::new(
+            &tab_page,
+            gui::ButtonOpts {
+                text: "TEST GROUPBOX TITLE",
+                position: gui::dpi(10, 10),
+                width: gui::dpi_x(240),
+                height: gui::dpi_x(120),
+                control_style: co::BS::GROUPBOX,
+                ..Default::default()
+            },
+        );
+        let settings_page = Self {
+            tab_page,
+            group_box,
+        };
         settings_page.setup_events();
         settings_page
     }

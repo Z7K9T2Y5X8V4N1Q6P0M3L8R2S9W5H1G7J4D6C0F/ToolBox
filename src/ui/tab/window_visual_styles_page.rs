@@ -1,4 +1,6 @@
-use winsafe::{HBRUSH, co, gui, prelude::*};
+use winsafe::{gui, prelude::*};
+
+use crate::ui::{self};
 
 #[derive(Clone)]
 pub struct WindowVisualStylesPage {
@@ -20,17 +22,6 @@ impl WindowVisualStylesPage {
     }
 
     fn setup_events(&self) {
-        let cloned_tab_page_for_background = self.tab_page.clone();
-        self.tab_page
-            .on()
-            .wm_erase_bkgnd(move |erase_bkgnd_params| {
-                let tab_page_content_client_rect =
-                    cloned_tab_page_for_background.hwnd().GetClientRect()?;
-                let background_brush = HBRUSH::GetSysColorBrush(co::COLOR::BTNFACE)?;
-                erase_bkgnd_params
-                    .hdc
-                    .FillRect(tab_page_content_client_rect, &background_brush)?;
-                Ok(1)
-            });
+        ui::tab::tab_page_utils::setup_tab_page_background_events(&self.tab_page);
     }
 }

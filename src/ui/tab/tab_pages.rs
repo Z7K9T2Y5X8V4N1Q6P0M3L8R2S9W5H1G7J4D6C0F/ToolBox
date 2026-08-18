@@ -78,24 +78,24 @@ impl TabPages {
 
         let tab_control_hwnd = self.tab_control.hwnd();
         let tab_control_parent_hwnd = tab_control_hwnd.GetParent()?;
-        let mut tab_page_content_rect =
+        let mut tab_page_content_screen_to_client_rect =
             tab_control_parent_hwnd.ScreenToClientRc(tab_control_hwnd.GetWindowRect()?)?;
         unsafe {
             tab_control_hwnd.SendMessage(msg::TcmAdjustRect {
                 display_rect: false,
-                rect: &mut tab_page_content_rect,
+                rect: &mut tab_page_content_screen_to_client_rect,
             });
         }
 
-        let calculated_tab_page_content_width =
-            tab_page_content_rect.right - tab_page_content_rect.left;
-        let calculated_tab_page_content_height =
-            tab_page_content_rect.bottom - tab_page_content_rect.top;
+        let calculated_tab_page_content_width = tab_page_content_screen_to_client_rect.right
+            - tab_page_content_screen_to_client_rect.left;
+        let calculated_tab_page_content_height = tab_page_content_screen_to_client_rect.bottom
+            - tab_page_content_screen_to_client_rect.top;
         target_tab_page.hwnd().SetWindowPos(
             winsafe::HwndPlace::None,
             POINT {
-                x: tab_page_content_rect.left,
-                y: tab_page_content_rect.top,
+                x: tab_page_content_screen_to_client_rect.left,
+                y: tab_page_content_screen_to_client_rect.top,
             },
             SIZE {
                 cx: calculated_tab_page_content_width,

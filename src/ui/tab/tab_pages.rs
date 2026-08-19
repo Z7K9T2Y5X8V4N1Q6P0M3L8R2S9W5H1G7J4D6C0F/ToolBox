@@ -23,8 +23,6 @@ impl TabPages {
         let tab_control = gui::Tab::new(
             parent_window,
             gui::TabOpts {
-                position: gui::dpi(10, 10),
-                size: gui::dpi(280, 480),
                 pages: &[
                     (&tab_control_titles[0], settings_page.into()),
                     (&tab_control_titles[1], window_visual_styles_page.into()),
@@ -39,10 +37,14 @@ impl TabPages {
         }
     }
 
-    pub fn resize(&self, client_width: i32, client_height: i32) -> winsafe::AnyResult<()> {
+    pub fn resize(
+        &self,
+        window_client_width: i32,
+        window_client_height: i32,
+    ) -> winsafe::AnyResult<()> {
         let tab_control_margin = gui::dpi_x(10);
-        let tab_control_width = client_width - (tab_control_margin * 2);
-        let tab_control_height = client_height - (tab_control_margin * 2);
+        let tab_control_width = window_client_width - (tab_control_margin * 2);
+        let tab_control_height = window_client_height - (tab_control_margin * 2);
 
         self.tab_control.hwnd().SetWindowPos(
             winsafe::HwndPlace::None,

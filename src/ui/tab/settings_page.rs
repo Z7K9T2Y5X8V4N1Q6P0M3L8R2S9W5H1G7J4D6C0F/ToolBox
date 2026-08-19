@@ -1,6 +1,9 @@
+use rust_i18n::t;
 use winsafe::{HwndPlace, POINT, SIZE, co, gui, prelude::*};
 
 use crate::ui;
+
+const GROUP_BOX_SETTINGS_TITLE: &str = "GROUP_BOX_SETTINGS_TITLE";
 
 #[derive(Clone)]
 pub struct SettingsPage {
@@ -26,7 +29,7 @@ impl SettingsPage {
         let group_box = gui::Button::new(
             &tab_page,
             gui::ButtonOpts {
-                text: "TEST GROUPBOX TITLE",
+                text: &t!(GROUP_BOX_SETTINGS_TITLE),
                 control_style: co::BS::GROUPBOX,
                 ..Default::default()
             },
@@ -37,6 +40,13 @@ impl SettingsPage {
         };
         settings_page.setup_events();
         settings_page
+    }
+
+    pub fn update_texts(&self) -> winsafe::AnyResult<()> {
+        self.group_box
+            .hwnd()
+            .SetWindowText(&t!(GROUP_BOX_SETTINGS_TITLE))?;
+        Ok(())
     }
 
     fn setup_events(&self) {

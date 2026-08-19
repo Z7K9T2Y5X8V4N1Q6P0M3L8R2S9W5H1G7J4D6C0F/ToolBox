@@ -7,6 +7,8 @@ use super::{settings_page::SettingsPage, window_visual_styles_page::WindowVisual
 pub struct TabPages {
     tab_control: gui::Tab,
     tab_pages: Vec<gui::TabPage>,
+    settings_page: SettingsPage,
+    window_visual_styles_page: WindowVisualStylesPage,
 }
 
 impl TabPages {
@@ -24,8 +26,11 @@ impl TabPages {
             parent_window,
             gui::TabOpts {
                 pages: &[
-                    (&tab_control_titles[0], settings_page.into()),
-                    (&tab_control_titles[1], window_visual_styles_page.into()),
+                    (&tab_control_titles[0], settings_page.clone().into()),
+                    (
+                        &tab_control_titles[1],
+                        window_visual_styles_page.clone().into(),
+                    ),
                 ],
                 ..Default::default()
             },
@@ -34,6 +39,8 @@ impl TabPages {
         Self {
             tab_control,
             tab_pages,
+            settings_page,
+            window_visual_styles_page,
         }
     }
 
@@ -120,6 +127,11 @@ impl TabPages {
             target_tab_control_item.set_text(tab_control_title)?;
         }
 
+        Ok(())
+    }
+
+    pub fn update_page_contents(&self) -> winsafe::AnyResult<()> {
+        self.settings_page.update_texts()?;
         Ok(())
     }
 }

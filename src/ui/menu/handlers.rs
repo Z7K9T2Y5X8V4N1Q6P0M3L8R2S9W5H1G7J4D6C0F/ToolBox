@@ -13,27 +13,34 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         .on()
         .wm_command_acc_menu(IDM_OPTIONS_RESTART_EXPLORER, move || Ok(()));
 
-    let cloned_main_window_instance_for_en_us = main_window_instance.clone();
-    main_window_instance
-        .main_window
-        .on()
-        .wm_command_acc_menu(IDM_LANG_EN_US, move || {
-            apply_language_change(
-                &cloned_main_window_instance_for_en_us,
-                "en-US",
-                AppLanguage::EnUs,
-            )
-        });
+    for (menu_command_id, locale_string, target_language) in [
+        (IDM_LANG_EN_US, "en-US", AppLanguage::EnUs),
+        (IDM_LANG_ZH_CN, "zh-CN", AppLanguage::ZhCn),
+    ] {
+        register_language_menu_handler(
+            main_window_instance,
+            menu_command_id,
+            locale_string,
+            target_language,
+        );
+    }
+}
 
-    let cloned_main_window_instance_for_zh_cn = main_window_instance.clone();
+fn register_language_menu_handler(
+    main_window_instance: &MainWindow,
+    menu_command_id: u16,
+    locale_string: &'static str,
+    target_language: AppLanguage,
+) {
+    let cloned_main_window_instance_language_menu_handler = main_window_instance.clone();
     main_window_instance
         .main_window
         .on()
-        .wm_command_acc_menu(IDM_LANG_ZH_CN, move || {
+        .wm_command_acc_menu(menu_command_id, move || {
             apply_language_change(
-                &cloned_main_window_instance_for_zh_cn,
-                "zh-CN",
-                AppLanguage::ZhCn,
+                &cloned_main_window_instance_language_menu_handler,
+                locale_string,
+                target_language,
             )
         });
 }

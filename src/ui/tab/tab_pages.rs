@@ -121,7 +121,6 @@ impl TabPages {
 
     pub fn update_tab_control_titles(&self) -> winsafe::AnyResult<()> {
         let tab_control_titles = Self::get_tab_control_titles();
-
         for (tab_control_index, tab_control_title) in tab_control_titles.iter().enumerate() {
             let target_tab_control_item = self.tab_control.items().get(tab_control_index as u32);
             target_tab_control_item.set_text(tab_control_title)?;

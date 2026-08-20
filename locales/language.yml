@@ -31,6 +31,14 @@ GROUP_BOX_SETTINGS_TITLE:
   en-US: "Settings"
   zh-CN: "设置"
 
+BUTTON_SELECT_ALL_TOGGLE:
+  en-US: "Toggle All"
+  zh-CN: "全选/反选"
+
+BUTTON_APPLY:
+  en-US: "Apply"
+  zh-CN: "应用"
+
 ERROR:
   en-US: "Error"
   zh-CN: "错误"

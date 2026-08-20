@@ -2,8 +2,8 @@ use winsafe::prelude::{GuiEventsParent, GuiWindow};
 
 use super::ids::IDM_OPTIONS_RESTART_EXPLORER;
 use crate::{
-    MainWindow,
     config::{AppConfig, AppLanguage},
+    core::MainWindow,
     ui::menu::ids::{IDM_LANG_EN_US, IDM_LANG_ZH_CN},
 };
 

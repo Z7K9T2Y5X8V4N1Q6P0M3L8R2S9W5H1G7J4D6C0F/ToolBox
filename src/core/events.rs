@@ -21,7 +21,7 @@ fn register_window_create_event(main_window_instance: &MainWindow) {
             .hwnd();
         let main_menu_bar = ui::menu::build_main_menu()?;
         main_window_hwnd.SetMenu(&main_menu_bar)?;
-        ui::window::window_utils::center_and_resize_window(main_window_hwnd)?;
+        ui::window::utils::center_and_resize_window(main_window_hwnd)?;
         Ok(0)
     });
 }
@@ -31,7 +31,7 @@ fn register_window_min_max_info_event(main_window_instance: &MainWindow) {
         .main_window
         .on()
         .wm_get_min_max_info(|min_max| {
-            ui::window::window_utils::apply_minimize_window_size(min_max.info);
+            ui::window::utils::apply_minimize_window_size(min_max.info);
             Ok(())
         });
 }

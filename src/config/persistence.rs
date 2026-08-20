@@ -6,7 +6,12 @@ use std::path::PathBuf;
 use winsafe::prelude::Handle;
 
 use crate::config::AppLanguage;
-use crate::config::ConfigLoadResult;
+
+pub enum ConfigLoadResult {
+    Loaded(AppConfig),
+    NotFound(AppConfig),
+    ParseFailed(anyhow::Error),
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE", deny_unknown_fields)]

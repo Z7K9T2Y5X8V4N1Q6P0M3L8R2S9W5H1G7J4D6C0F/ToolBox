@@ -1,7 +1,5 @@
-mod app_config;
-mod app_language;
-mod load_result;
+mod language;
+mod persistence;
 
-pub use app_config::AppConfig;
-pub use app_language::AppLanguage;
-pub use load_result::ConfigLoadResult;
+pub use language::AppLanguage;
+pub use persistence::AppConfig;

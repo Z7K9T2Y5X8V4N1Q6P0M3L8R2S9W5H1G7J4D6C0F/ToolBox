@@ -119,7 +119,7 @@ impl SettingsPage {
             let tab_page_client_height = size_info.client_area.cy;
 
             let group_box_height =
-                tab_page_client_height - 2 * group_box_margin - button_height - group_box_margin;
+                tab_page_client_height - (2 * group_box_margin) - button_height - group_box_margin;
 
             group_box.hwnd().SetWindowPos(
                 HwndPlace::None,
@@ -135,7 +135,6 @@ impl SettingsPage {
             )?;
 
             let button_vertical_position = group_box_margin + group_box_height + group_box_margin;
-
             let button_apply_horizontal_position =
                 tab_page_client_width - group_box_margin - button_width;
             button_apply.hwnd().SetWindowPos(

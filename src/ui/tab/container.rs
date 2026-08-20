@@ -1,7 +1,7 @@
 use rust_i18n::t;
 use winsafe::{HwndPlace, POINT, SIZE, co, gui, msg, prelude::*};
 
-use super::{settings_page::SettingsPage, window_visual_styles_page::WindowVisualStylesPage};
+use super::pages::{settings::SettingsPage, window_visual_styles::WindowVisualStylesPage};
 
 #[derive(Clone)]
 pub struct TabPages {

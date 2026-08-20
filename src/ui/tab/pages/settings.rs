@@ -99,7 +99,7 @@ impl SettingsPage {
     }
 
     fn setup_events(&self) {
-        ui::tab::tab_page_utils::setup_tab_page_background_events(&self.tab_page);
+        ui::tab::pages::utils::setup_tab_page_background_events(&self.tab_page);
         self.setup_resize_event();
         self.setup_button_select_all_toggle_event();
         self.setup_button_apply_event();

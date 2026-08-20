@@ -4,8 +4,8 @@ use winsafe::{HwndPlace, POINT, SIZE, co, gui, prelude::*};
 use crate::ui;
 
 const GROUP_BOX_SETTINGS_TITLE: &str = "GROUP_BOX_SETTINGS_TITLE";
-const BUTTON_SELECT_ALL_TOGGLE: &str = "BUTTON_SELECT_ALL_TOGGLE";
-const BUTTON_APPLY: &str = "BUTTON_APPLY";
+const BUTTON_SELECT_ALL_TOGGLE_TEXT: &str = "BUTTON_SELECT_ALL_TOGGLE";
+const BUTTON_APPLY_TEXT: &str = "BUTTON_APPLY";
 
 #[derive(Clone)]
 pub struct SettingsPage {
@@ -45,9 +45,11 @@ impl SettingsPage {
 
         self.button_select_all_toggle
             .hwnd()
-            .SetWindowText(&t!(BUTTON_SELECT_ALL_TOGGLE))?;
+            .SetWindowText(&t!(BUTTON_SELECT_ALL_TOGGLE_TEXT))?;
 
-        self.button_apply.hwnd().SetWindowText(&t!(BUTTON_APPLY))?;
+        self.button_apply
+            .hwnd()
+            .SetWindowText(&t!(BUTTON_APPLY_TEXT))?;
         Ok(())
     }
 
@@ -76,7 +78,7 @@ impl SettingsPage {
         gui::Button::new(
             parent_window,
             gui::ButtonOpts {
-                text: &t!(BUTTON_SELECT_ALL_TOGGLE),
+                text: &t!(BUTTON_SELECT_ALL_TOGGLE_TEXT),
                 width: 75,
                 height: 25,
                 ..Default::default()
@@ -88,7 +90,7 @@ impl SettingsPage {
         gui::Button::new(
             parent_window,
             gui::ButtonOpts {
-                text: &t!(BUTTON_APPLY),
+                text: &t!(BUTTON_APPLY_TEXT),
                 width: 75,
                 height: 25,
                 ..Default::default()

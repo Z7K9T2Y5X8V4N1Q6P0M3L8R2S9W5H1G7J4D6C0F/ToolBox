@@ -19,21 +19,9 @@ impl From<SettingsPage> for gui::TabPage {
 
 impl SettingsPage {
     pub fn new(parent_window: &(impl GuiParent + 'static)) -> Self {
-        let tab_page = gui::TabPage::new(
-            parent_window,
-            gui::TabPageOpts {
-                class_style: co::CS::HREDRAW | co::CS::VREDRAW,
-                ..Default::default()
-            },
-        );
-        let group_box = gui::Button::new(
-            &tab_page,
-            gui::ButtonOpts {
-                text: &t!(GROUP_BOX_SETTINGS_TITLE),
-                control_style: co::BS::GROUPBOX,
-                ..Default::default()
-            },
-        );
+        let tab_page = Self::create_tab_page(parent_window);
+        let group_box = Self::create_group_box(&tab_page);
+
         let settings_page = Self {
             tab_page,
             group_box,
@@ -49,9 +37,33 @@ impl SettingsPage {
         Ok(())
     }
 
+    fn create_tab_page(parent_window: &(impl GuiParent + 'static)) -> gui::TabPage {
+        gui::TabPage::new(
+            parent_window,
+            gui::TabPageOpts {
+                class_style: co::CS::HREDRAW | co::CS::VREDRAW,
+                ..Default::default()
+            },
+        )
+    }
+
+    fn create_group_box(parent_window: &gui::TabPage) -> gui::Button {
+        gui::Button::new(
+            parent_window,
+            gui::ButtonOpts {
+                text: &t!(GROUP_BOX_SETTINGS_TITLE),
+                control_style: co::BS::GROUPBOX,
+                ..Default::default()
+            },
+        )
+    }
+
     fn setup_events(&self) {
         ui::tab::tab_page_utils::setup_tab_page_background_events(&self.tab_page);
+        self.setup_resize_event();
+    }
 
+    fn setup_resize_event(&self) {
         let group_box = self.group_box.clone();
 
         self.tab_page.on().wm_size(move |size_info| {

@@ -51,7 +51,7 @@ impl AppConfig {
             return ConfigLoadResult::NotFound(Self::default());
         }
 
-        let toml_content = match Self::read_config_file(&config_path) {
+        let toml_content = match Self::read_config(&config_path) {
             Ok(content) => content,
             Err(read_error) => return ConfigLoadResult::ParseFailed(read_error),
         };
@@ -62,7 +62,7 @@ impl AppConfig {
         }
     }
 
-    fn read_config_file(config_path: &PathBuf) -> Result<String> {
+    fn read_config(config_path: &PathBuf) -> Result<String> {
         fs::read_to_string(config_path).with_context(|| {
             t!(
                 "CONFIG_READ_FAILED",

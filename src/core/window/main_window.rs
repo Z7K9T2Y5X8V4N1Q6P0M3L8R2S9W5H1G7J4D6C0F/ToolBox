@@ -11,7 +11,7 @@ use crate::{
 pub struct MainWindow {
     pub(crate) main_window: winsafe::gui::WindowMain,
     pub(crate) pending_error_message: Rc<RefCell<Option<String>>>,
-    pub(crate) tab_pages: ui::tab::tab_pages::TabPages,
+    pub(crate) tab_pages: ui::tab::container::TabPages,
 }
 
 impl MainWindow {
@@ -25,7 +25,7 @@ impl MainWindow {
             ..Default::default()
         });
 
-        let tab_pages = ui::tab::tab_pages::TabPages::new(&main_window);
+        let tab_pages = ui::tab::container::TabPages::new(&main_window);
 
         let main_window_instance = Self {
             main_window,

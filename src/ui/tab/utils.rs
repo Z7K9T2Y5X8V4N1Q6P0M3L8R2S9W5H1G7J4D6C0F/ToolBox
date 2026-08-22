@@ -1,7 +1,4 @@
-use winsafe::{
-    HBRUSH, co, gui,
-    prelude::{GuiEventsWindow, GuiWindow},
-};
+use winsafe::{HBRUSH, HWND, HwndPlace, POINT, SIZE, co, gui, prelude::*};
 
 pub(super) fn setup_tab_page_background_events(tab_page: &gui::TabPage) {
     let cloned_tab_page_for_background = tab_page.clone();
@@ -13,4 +10,18 @@ pub(super) fn setup_tab_page_background_events(tab_page: &gui::TabPage) {
             .FillRect(tab_page_content_client_rect, &background_brush)?;
         Ok(1)
     });
+}
+
+pub(super) fn reposition_control(
+    control_hwnd: &HWND,
+    position: POINT,
+    size: SIZE,
+) -> winsafe::AnyResult<()> {
+    control_hwnd.SetWindowPos(
+        HwndPlace::None,
+        position,
+        size,
+        co::SWP::NOZORDER | co::SWP::NOCOPYBITS,
+    )?;
+    Ok(())
 }

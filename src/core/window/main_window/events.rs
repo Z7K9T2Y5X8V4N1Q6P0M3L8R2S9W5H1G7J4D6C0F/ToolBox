@@ -1,8 +1,7 @@
 use rust_i18n::t;
 use winsafe::prelude::{GuiEventsParent, GuiEventsWindow, GuiWindow};
 
-use super::MainWindow;
-use crate::ui;
+use crate::{core::window::main_window::builder::MainWindow, ui};
 
 pub fn register_all_events(main_window_instance: &MainWindow) -> winsafe::AnyResult<()> {
     ui::menu::register_menu_events(main_window_instance);

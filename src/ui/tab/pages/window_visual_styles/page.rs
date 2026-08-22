@@ -1,6 +1,6 @@
 use winsafe::{gui, prelude::*};
 
-use crate::ui::{self};
+use crate::ui;
 
 #[derive(Clone)]
 pub struct WindowVisualStylesPage {
@@ -22,6 +22,6 @@ impl WindowVisualStylesPage {
     }
 
     fn setup_events(&self) {
-        ui::tab::pages::utils::setup_tab_page_background_events(&self.tab_page);
+        ui::tab::utils::setup_tab_page_background_events(&self.tab_page);
     }
 }

@@ -2,21 +2,18 @@ use std::{cell::RefCell, rc::Rc};
 
 use rust_i18n::t;
 
-use crate::{
-    core::{events, init},
-    ui,
-};
+use crate::ui;
 
 #[derive(Clone)]
 pub struct MainWindow {
     pub(crate) main_window: winsafe::gui::WindowMain,
     pub(crate) pending_error_message: Rc<RefCell<Option<String>>>,
-    pub(crate) tab_pages: ui::tab::container::TabPages,
+    pub(crate) tab_pages: ui::tab::control::container::TabPages,
 }
 
 impl MainWindow {
     pub fn create_and_run() -> winsafe::AnyResult<i32> {
-        init::initialize_application();
+        crate::core::window::main_window::init::initialize_application();
 
         let window_title = t!("TOOLBOX_TITLE");
         let main_window = winsafe::gui::WindowMain::new(winsafe::gui::WindowMainOpts {
@@ -25,7 +22,7 @@ impl MainWindow {
             ..Default::default()
         });
 
-        let tab_pages = ui::tab::container::TabPages::new(&main_window);
+        let tab_pages = ui::tab::control::container::TabPages::new(&main_window);
 
         let main_window_instance = Self {
             main_window,
@@ -33,7 +30,7 @@ impl MainWindow {
             tab_pages,
         };
 
-        events::register_all_events(&main_window_instance)?;
+        crate::core::window::main_window::events::register_all_events(&main_window_instance)?;
         main_window_instance.main_window.run_main(None)
     }
 }

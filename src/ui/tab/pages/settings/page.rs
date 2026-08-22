@@ -5,10 +5,6 @@ use crate::ui::tab::pages::settings::layout::{BUTTON_HEIGHT, BUTTON_WIDTH};
 
 use super::events;
 
-const GROUP_BOX_SETTINGS_TITLE: &str = "GROUP_BOX_SETTINGS_TITLE";
-const BUTTON_SELECT_ALL_TOGGLE_TEXT: &str = "BUTTON_SELECT_ALL_TOGGLE";
-const BUTTON_APPLY_TEXT: &str = "BUTTON_APPLY";
-
 #[derive(Clone)]
 pub struct SettingsPage {
     tab_page: gui::TabPage,
@@ -48,15 +44,15 @@ impl SettingsPage {
     pub fn update_texts(&self) -> winsafe::AnyResult<()> {
         self.group_box
             .hwnd()
-            .SetWindowText(&t!(GROUP_BOX_SETTINGS_TITLE))?;
+            .SetWindowText(&t!("GROUP_BOX_SETTINGS_TITLE"))?;
 
         self.button_select_all_toggle
             .hwnd()
-            .SetWindowText(&t!(BUTTON_SELECT_ALL_TOGGLE_TEXT))?;
+            .SetWindowText(&t!("BUTTON_SELECT_ALL_TOGGLE"))?;
 
         self.button_apply
             .hwnd()
-            .SetWindowText(&t!(BUTTON_APPLY_TEXT))?;
+            .SetWindowText(&t!("BUTTON_APPLY"))?;
         Ok(())
     }
 
@@ -74,7 +70,7 @@ impl SettingsPage {
         gui::Button::new(
             parent_window,
             gui::ButtonOpts {
-                text: &t!(GROUP_BOX_SETTINGS_TITLE),
+                text: &t!("GROUP_BOX_SETTINGS_TITLE"),
                 control_style: co::BS::GROUPBOX,
                 ..Default::default()
             },
@@ -85,7 +81,7 @@ impl SettingsPage {
         gui::Button::new(
             parent_window,
             gui::ButtonOpts {
-                text: &t!(BUTTON_SELECT_ALL_TOGGLE_TEXT),
+                text: &t!("BUTTON_SELECT_ALL_TOGGLE"),
                 width: BUTTON_WIDTH,
                 height: BUTTON_HEIGHT,
                 ..Default::default()
@@ -97,7 +93,7 @@ impl SettingsPage {
         gui::Button::new(
             parent_window,
             gui::ButtonOpts {
-                text: &t!(BUTTON_APPLY_TEXT),
+                text: &t!("BUTTON_APPLY"),
                 width: BUTTON_WIDTH,
                 height: BUTTON_HEIGHT,
                 ..Default::default()

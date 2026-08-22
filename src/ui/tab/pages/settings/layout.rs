@@ -25,7 +25,7 @@ impl SettingsPageLayout {
         let group_box_height =
             tab_page_client_height - (2 * group_box_margin) - button_height - group_box_margin;
 
-        let button_row_vertical_position = group_box_margin + group_box_height + group_box_margin;
+        let button_vertical_position = group_box_margin + group_box_height + group_box_margin;
         let button_apply_horizontal_position =
             tab_page_client_width - group_box_margin - button_width;
         let button_select_all_toggle_horizontal_position =
@@ -42,7 +42,7 @@ impl SettingsPageLayout {
             },
             button_apply_position: POINT {
                 x: button_apply_horizontal_position,
-                y: button_row_vertical_position,
+                y: button_vertical_position,
             },
             button_apply_size: SIZE {
                 cx: button_width,
@@ -50,7 +50,7 @@ impl SettingsPageLayout {
             },
             button_select_all_toggle_position: POINT {
                 x: button_select_all_toggle_horizontal_position,
-                y: button_row_vertical_position,
+                y: button_vertical_position,
             },
             button_select_all_toggle_size: SIZE {
                 cx: button_width,

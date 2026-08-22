@@ -30,25 +30,25 @@ fn setup_resize_event(
     let cloned_button_select_all_toggle_for_window_size_event = button_select_all_toggle.clone();
     let cloned_button_apply_for_window_size_event = button_apply.clone();
     tab_page.on().wm_size(move |size_info| {
-        let layout =
+        let settings_page_layout =
             SettingsPageLayout::calculate(size_info.client_area.cx, size_info.client_area.cy);
 
         ui::tab::utils::reposition_control(
             cloned_group_box_for_window_size_event.hwnd(),
-            layout.group_box_position,
-            layout.group_box_size,
+            settings_page_layout.group_box_position,
+            settings_page_layout.group_box_size,
         )?;
 
         ui::tab::utils::reposition_control(
             cloned_button_apply_for_window_size_event.hwnd(),
-            layout.button_apply_position,
-            layout.button_apply_size,
+            settings_page_layout.button_apply_position,
+            settings_page_layout.button_apply_size,
         )?;
 
         ui::tab::utils::reposition_control(
             cloned_button_select_all_toggle_for_window_size_event.hwnd(),
-            layout.button_select_all_toggle_position,
-            layout.button_select_all_toggle_size,
+            settings_page_layout.button_select_all_toggle_position,
+            settings_page_layout.button_select_all_toggle_size,
         )?;
 
         Ok(())

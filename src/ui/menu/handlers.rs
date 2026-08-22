@@ -53,7 +53,7 @@ fn apply_language_change(
     rust_i18n::set_locale(locale);
 
     let main_window_hwnd = main_window_instance.main_window.hwnd();
-    main_window_hwnd.SetMenu(&super::build_main_menu()?)?;
+    rebuild_main_menu(&main_window_hwnd)?;
     main_window_hwnd.SetWindowText(&rust_i18n::t!("TOOLBOX_TITLE"))?;
 
     main_window_instance.tab_pages.update_tab_control_titles()?;
@@ -76,5 +76,14 @@ fn apply_language_change(
         }
     }
 
+    Ok(())
+}
+
+fn rebuild_main_menu(main_window_hwnd: &winsafe::HWND) -> winsafe::AnyResult<()> {
+    let old_hmenu = main_window_hwnd.GetMenu();
+    main_window_hwnd.SetMenu(&super::build_main_menu()?)?;
+    if let Some(mut old_hmenu) = old_hmenu {
+        old_hmenu.DestroyMenu()?;
+    }
     Ok(())
 }

@@ -6,7 +6,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use rust_i18n::t;
-use winsafe::{WString, gui, msg, prelude::*};
+use winsafe::{HIMAGELIST, SIZE, WString, co, gui, msg, prelude::*};
 
 use super::layout::{WindowVisualStylesPageLayout, calculate_process_listview_column_widths};
 use super::process::{ProcessItem, ProcessManager};
@@ -17,6 +17,9 @@ const PROCESS_REFRESH_TIMER_ID: usize = 3001;
 
 /// Process list auto-refresh interval in milliseconds.
 const PROCESS_REFRESH_INTERVAL_MS: u32 = 1000;
+
+/// Target row height for each item in the ListView at 96 DPI.
+const LISTVIEW_ROW_HEIGHT_RAW: i32 = 30;
 
 /// Wire up all event handlers for the window visual styles page.
 ///
@@ -43,9 +46,10 @@ pub(super) fn setup_all_events(
 ///
 /// All initialization steps that require a valid HWND are coordinated here in a
 /// single closure to prevent multiple `wm_create` registrations from overwriting each other:
-/// 1. Set the edit control's cue banner (placeholder).
-/// 2. Fetch the initial snapshot of system processes and populate the ListView.
-/// 3. Start the periodic 1-second Win32 timer for ongoing background refreshes.
+/// 1. Configure the ListView item height by binding a custom-dimension dummy ImageList.
+/// 2. Set the edit control's cue banner (placeholder).
+/// 3. Fetch the initial snapshot of system processes and populate the ListView.
+/// 4. Start the periodic 1-second Win32 timer for ongoing background refreshes.
 fn setup_page_initialization_event(
     tab_page: &gui::TabPage,
     edit: &gui::Edit,
@@ -58,7 +62,10 @@ fn setup_page_initialization_event(
     let cloned_process_manager = process_manager.clone();
 
     tab_page.on().wm_create(move |_| {
-        // Step 1: Set cue banner for the edit input field.
+        // Step 1: Expand row height using a DPI-scaled dummy ImageList.
+        apply_custom_row_height(&cloned_listview)?;
+
+        // Step 2: Set cue banner for the edit input field.
         unsafe {
             cloned_edit
                 .hwnd()
@@ -69,11 +76,11 @@ fn setup_page_initialization_event(
                 .ok();
         }
 
-        // Step 2: Populate initial process list snapshot.
+        // Step 3: Populate initial process list snapshot.
         let initial_processes = cloned_process_manager.borrow_mut().fetch_sorted_processes();
         apply_process_list_to_view(&cloned_listview, &initial_processes)?;
 
-        // Step 3: Start auto-refresh timer.
+        // Step 4: Start auto-refresh timer.
         cloned_tab_page.hwnd().SetTimer(
             PROCESS_REFRESH_TIMER_ID,
             PROCESS_REFRESH_INTERVAL_MS,
@@ -82,6 +89,30 @@ fn setup_page_initialization_event(
 
         Ok(0)
     });
+}
+
+/// Enlarge the row height of the ListView control to a modern visual spacing.
+///
+/// Win32 ListView items in report mode derive their vertical height from either the
+/// font line-height or the attached `LVSIL_SMALL` ImageList. Attaching a 1-pixel-wide
+/// ImageList with a DPI-scaled height of 30px stretches the entire row without
+/// requiring custom drawing.
+fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyResult<()> {
+    let row_height = gui::dpi_y(LISTVIEW_ROW_HEIGHT_RAW);
+    let dummy_image_size = SIZE::with(1, row_height);
+
+    // Create the dummy ImageList with the specified DPI-scaled height and leak the guard
+    // so the control can take permanent ownership of the handle.
+    let image_list = HIMAGELIST::Create(dummy_image_size, co::ILC::COLOR32, 0, 0)?.leak();
+
+    unsafe {
+        listview.hwnd().SendMessage(msg::LvmSetImageList {
+            kind: co::LVSIL::SMALL,
+            himagelist: Some(image_list.raw_copy()),
+        });
+    }
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

@@ -49,8 +49,8 @@ pub(super) fn create_listview(parent_window: &gui::TabPage) -> gui::ListView {
                 | co::LVS_EX::GRIDLINES
                 | co::LVS_EX::DOUBLEBUFFER,
             columns: &[
-                (&t!("LISTVIEW_COLUMN_PROCESS_NAME"), gui::dpi_x(180)),
-                (&t!("LISTVIEW_COLUMN_PID"), gui::dpi_x(100)),
+                (&t!("LISTVIEW_COLUMN_PROCESS_NAME"), 0),
+                (&t!("LISTVIEW_COLUMN_PID"), 0),
             ],
             ..Default::default()
         },

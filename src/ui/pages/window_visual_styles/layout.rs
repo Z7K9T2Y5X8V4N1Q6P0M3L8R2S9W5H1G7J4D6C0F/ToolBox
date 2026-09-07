@@ -30,6 +30,34 @@ fn non_negative(value: i32) -> i32 {
 }
 
 // ---------------------------------------------------------------------------
+// ListView Column Width Calculation
+// ---------------------------------------------------------------------------
+
+/// Calculated column widths for the process ListView control.
+pub(super) struct ProcessListViewColumnWidths {
+    pub process_name_column_width: i32,
+    pub process_id_column_width: i32,
+}
+
+/// Calculate proportional column widths for the process ListView.
+///
+/// Allocates 70% of the total width to the process name column and the remaining
+/// 30% to the process ID column. Subtracts the first column's width from the total
+/// to avoid pixel rounding gaps.
+pub(super) fn calculate_process_listview_column_widths(
+    listview_width: i32,
+) -> ProcessListViewColumnWidths {
+    let listview_width = non_negative(listview_width);
+    let process_name_column_width = (listview_width * 70) / 100;
+    let process_id_column_width = listview_width - process_name_column_width;
+
+    ProcessListViewColumnWidths {
+        process_name_column_width,
+        process_id_column_width,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // WindowVisualStylesPageLayout
 // ---------------------------------------------------------------------------
 

@@ -8,7 +8,7 @@ use std::{cell::RefCell, rc::Rc};
 use rust_i18n::t;
 use winsafe::{WString, gui, msg, prelude::*};
 
-use super::layout::WindowVisualStylesPageLayout;
+use super::layout::{WindowVisualStylesPageLayout, calculate_process_listview_column_widths};
 use super::process::{ProcessItem, ProcessManager};
 use crate::ui::tab::layout as tab_layout;
 
@@ -137,8 +137,30 @@ fn setup_resize_event(tab_page: &gui::TabPage, edit: &gui::Edit, listview: &gui:
             window_visual_styles_page_layout.listview_size,
         )?;
 
+        apply_dynamic_column_widths(
+            &cloned_listview,
+            window_visual_styles_page_layout.listview_size.cx,
+        )?;
+
         Ok(())
     });
+}
+
+/// Apply dynamically computed column widths to the ListView.
+fn apply_dynamic_column_widths(
+    listview: &gui::ListView,
+    listview_width: i32,
+) -> winsafe::AnyResult<()> {
+    let column_widths = calculate_process_listview_column_widths(listview_width);
+    listview
+        .cols()
+        .get(0)
+        .set_width(column_widths.process_name_column_width)?;
+    listview
+        .cols()
+        .get(1)
+        .set_width(column_widths.process_id_column_width)?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

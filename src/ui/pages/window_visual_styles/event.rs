@@ -9,8 +9,8 @@ use rust_i18n::t;
 use winsafe::{HIMAGELIST, SIZE, WString, co, gui, msg, prelude::*};
 
 use super::layout::{
-    WindowVisualStylesPageLayout, calculate_process_listview_column_widths,
-    update_listview_header_sort_indicator,
+    WindowVisualStylesPageLayout, calculate_listview_usable_column_width,
+    calculate_process_listview_column_widths, update_listview_header_sort_indicator,
 };
 use super::process::{ProcessItem, ProcessManager, SortColumn};
 use crate::ui::tab::layout as tab_layout;
@@ -53,7 +53,8 @@ pub(super) fn setup_all_events(
 /// 2. Set the edit control's cue banner (placeholder).
 /// 3. Fetch the initial snapshot of system processes and populate the ListView.
 /// 4. Display the initial sorting arrow on the header.
-/// 5. Start the periodic 1-second Win32 timer for ongoing background refreshes.
+/// 5. Ensure column widths are synchronized with visible vertical scrollbar.
+/// 6. Start the periodic 1-second Win32 timer for ongoing background refreshes.
 fn setup_page_initialization_event(
     tab_page: &gui::TabPage,
     edit: &gui::Edit,
@@ -91,7 +92,10 @@ fn setup_page_initialization_event(
             borrowed_process_manager.current_sort_config(),
         );
 
-        // Step 5: Start auto-refresh timer.
+        // Step 5: Ensure column widths are synchronized after items are populated.
+        apply_dynamic_column_widths(&cloned_listview)?;
+
+        // Step 6: Start auto-refresh timer.
         cloned_tab_page.hwnd().SetTimer(
             PROCESS_REFRESH_TIMER_ID,
             PROCESS_REFRESH_INTERVAL_MS,
@@ -215,21 +219,16 @@ fn setup_resize_event(tab_page: &gui::TabPage, edit: &gui::Edit, listview: &gui:
             window_visual_styles_page_layout.listview_size,
         )?;
 
-        apply_dynamic_column_widths(
-            &cloned_listview,
-            window_visual_styles_page_layout.listview_size.cx,
-        )?;
+        apply_dynamic_column_widths(&cloned_listview)?;
 
         Ok(())
     });
 }
 
 /// Apply dynamically computed column widths to the ListView.
-fn apply_dynamic_column_widths(
-    listview: &gui::ListView,
-    listview_width: i32,
-) -> winsafe::AnyResult<()> {
-    let column_widths = calculate_process_listview_column_widths(listview_width);
+fn apply_dynamic_column_widths(listview: &gui::ListView) -> winsafe::AnyResult<()> {
+    let usable_column_width = calculate_listview_usable_column_width(listview.hwnd());
+    let column_widths = calculate_process_listview_column_widths(usable_column_width);
     listview
         .cols()
         .get(0)

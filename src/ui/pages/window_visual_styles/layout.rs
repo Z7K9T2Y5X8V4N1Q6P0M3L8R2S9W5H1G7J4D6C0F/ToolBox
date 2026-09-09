@@ -40,6 +40,13 @@ fn non_negative(value: i32) -> i32 {
     value.max(0)
 }
 
+/// Check whether the ListView currently has a native vertical scrollbar attached.
+fn is_vertical_scrollbar_visible(listview_hwnd: &winsafe::HWND) -> bool {
+    let window_style_bits = listview_hwnd.GetWindowLongPtr(co::GWLP::STYLE) as u32;
+    let window_style_flags = unsafe { co::WS::from_raw(window_style_bits) };
+    window_style_flags.has(co::WS::VSCROLL)
+}
+
 // ---------------------------------------------------------------------------
 // ListView Column Width Calculation
 // ---------------------------------------------------------------------------
@@ -50,17 +57,44 @@ pub(super) struct ProcessListViewColumnWidths {
     pub process_id_column_width: i32,
 }
 
+/// Calculate the usable client width for ListView columns without triggering horizontal scrollbars.
+///
+/// Deducts the vertical scrollbar width (if not already excluded by Win32 client rect calculations)
+/// and a small safety margin to prevent rounding artifacts or grid line borders from causing
+/// a horizontal scrollbar.
+pub(super) fn calculate_listview_usable_column_width(listview_hwnd: &winsafe::HWND) -> i32 {
+    let client_rectangle = match listview_hwnd.GetClientRect() {
+        Ok(client_rectangle) => client_rectangle,
+        Err(_) => return 0,
+    };
+
+    let mut available_width = client_rectangle.right - client_rectangle.left;
+
+    // Win32 behavior: If a window has WS_VSCROLL active, GetClientRect() already
+    // automatically subtracts the vertical scrollbar width (SM_CXVSCROLL).
+    // However, during initial layout or before items are populated, the scrollbar
+    // is not yet visible, meaning GetClientRect() returns the full un-deducted width.
+    // Because the process list will inevitably exceed visible rows, we must proactively
+    // reserve space here to prevent columns from overflowing once the scrollbar appears.
+    if !is_vertical_scrollbar_visible(listview_hwnd) {
+        let vertical_scrollbar_width = winsafe::GetSystemMetrics(co::SM::CXVSCROLL);
+        available_width -= vertical_scrollbar_width;
+    }
+
+    non_negative(available_width)
+}
+
 /// Calculate proportional column widths for the process ListView.
 ///
-/// Allocates 70% of the total width to the process name column and the remaining
+/// Allocates 70% of the total usable width to the process name column and the remaining
 /// 30% to the process ID column. Subtracts the first column's width from the total
 /// to avoid pixel rounding gaps.
 pub(super) fn calculate_process_listview_column_widths(
-    listview_width: i32,
+    usable_width: i32,
 ) -> ProcessListViewColumnWidths {
-    let listview_width = non_negative(listview_width);
-    let process_name_column_width = (listview_width * 70) / 100;
-    let process_id_column_width = listview_width - process_name_column_width;
+    let usable_width = non_negative(usable_width);
+    let process_name_column_width = (usable_width * 70) / 100;
+    let process_id_column_width = non_negative(usable_width - process_name_column_width);
 
     ProcessListViewColumnWidths {
         process_name_column_width,

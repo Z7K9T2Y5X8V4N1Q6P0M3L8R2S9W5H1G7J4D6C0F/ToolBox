@@ -33,13 +33,13 @@ impl WindowVisualStylesPage {
     ///
     /// Must be called before the message loop starts, on the same thread as
     /// the parent window.
-    pub fn new(parent_window: &(impl GuiParent + 'static)) -> Self {
+    pub fn new(parent_window: &(impl GuiParent + 'static), status_bar: gui::StatusBar) -> Self {
         let process_manager = Rc::new(RefCell::new(ProcessManager::new()));
         let tab_page = super::build::create_tab_page(parent_window);
         let edit = super::build::create_edit(&tab_page);
         let listview = super::build::create_listview(&tab_page);
 
-        super::event::setup_all_events(&tab_page, &edit, &listview, &process_manager);
+        super::event::setup_all_events(&tab_page, &edit, &listview, &process_manager, &status_bar);
 
         Self {
             tab_page,

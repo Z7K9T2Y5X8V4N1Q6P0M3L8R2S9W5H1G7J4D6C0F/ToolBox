@@ -26,8 +26,8 @@ pub struct TabContainer {
 impl TabContainer {
     /// Construct the tab control and all pages, wiring up their events.
     pub fn new(parent_window: &(impl GuiParent + 'static), status_bar: gui::StatusBar) -> Self {
-        let settings_page = SettingsPage::new(parent_window, status_bar);
-        let window_visual_styles_page = WindowVisualStylesPage::new(parent_window);
+        let settings_page = SettingsPage::new(parent_window, status_bar.clone());
+        let window_visual_styles_page = WindowVisualStylesPage::new(parent_window, status_bar);
 
         let tab_pages = vec![
             settings_page.clone().into(),

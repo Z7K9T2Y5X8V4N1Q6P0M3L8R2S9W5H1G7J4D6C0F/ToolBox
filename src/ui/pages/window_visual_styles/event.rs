@@ -3,10 +3,15 @@
 //! [`setup_all_events`] is the single entry point called from [`WindowVisualStylesPage::new`].
 //! It wires up every event handler for the window visual styles page in the correct order.
 
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use rust_i18n::t;
-use winsafe::{HIMAGELIST, SIZE, WString, co, gui, msg, prelude::*};
+use winsafe::{
+    HIMAGELIST, SIZE, TRACKMOUSEEVENT, TrackMouseEvent, WString, co, gui, msg, prelude::*,
+};
 
 use super::layout::{
     WindowVisualStylesPageLayout, calculate_listview_usable_column_width,
@@ -33,12 +38,14 @@ pub(super) fn setup_all_events(
     edit: &gui::Edit,
     listview: &gui::ListView,
     process_manager: &Rc<RefCell<ProcessManager>>,
+    status_bar: &gui::StatusBar,
 ) {
     tab_layout::paint_tab_page_background(tab_page);
     setup_resize_event(tab_page, edit, listview);
     setup_page_initialization_event(tab_page, edit, listview, process_manager);
     setup_column_click_event(listview, process_manager);
     setup_timer_refresh_event(tab_page, listview, process_manager);
+    setup_listview_hover_event(listview, status_bar);
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +189,49 @@ fn setup_timer_refresh_event(
     tab_page.on().wm_timer(PROCESS_REFRESH_TIMER_ID, move || {
         let updated_processes = cloned_process_manager.borrow_mut().fetch_sorted_processes();
         apply_process_list_to_view(&cloned_listview, &updated_processes)?;
+        Ok(())
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Hover Description (Status Bar)
+// ---------------------------------------------------------------------------
+
+/// Register mouse hover and leave events on the ListView to update the status bar text.
+fn setup_listview_hover_event(listview: &gui::ListView, status_bar: &gui::StatusBar) {
+    let is_mouse_inside = Rc::new(Cell::new(false));
+
+    let cloned_status_bar_for_mouse_move = status_bar.clone();
+    let cloned_listview_for_mouse_move = listview.clone();
+    let cloned_is_mouse_inside_for_mouse_move = is_mouse_inside.clone();
+
+    listview.on_subclass().wm_mouse_move(move |_| {
+        if !cloned_is_mouse_inside_for_mouse_move.get() {
+            cloned_is_mouse_inside_for_mouse_move.set(true);
+
+            let hover_description_text = t!("STATUS_BAR_LISTVIEW_HINT");
+            cloned_status_bar_for_mouse_move
+                .parts()
+                .set_texts(&[Some(hover_description_text.as_ref())]);
+
+            // Request WM_MOUSELEAVE notification to reset status bar when mouse exits control bounds.
+            let mut track_mouse_event_info = TRACKMOUSEEVENT::default();
+            track_mouse_event_info.dwFlags = co::TME::LEAVE;
+            track_mouse_event_info.hwndTrack =
+                unsafe { winsafe::HWND::from_ptr(cloned_listview_for_mouse_move.hwnd().ptr()) };
+            TrackMouseEvent(&mut track_mouse_event_info)?;
+        }
+
+        Ok(())
+    });
+
+    let cloned_is_mouse_inside_for_mouse_leave = is_mouse_inside;
+    let cloned_status_bar_for_mouse_leave = status_bar.clone();
+    listview.on_subclass().wm_mouse_leave(move || {
+        cloned_is_mouse_inside_for_mouse_leave.set(false);
+        cloned_status_bar_for_mouse_leave
+            .parts()
+            .set_texts(&[Some("")]);
         Ok(())
     });
 }

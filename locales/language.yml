@@ -65,7 +65,7 @@ LISTVIEW_COLUMN_PROCESS_NAME:
 
 LISTVIEW_COLUMN_PID:
   en-US: "PID"
-  zh-CN: "进程 ID"
+  zh-CN: "PID"
 
 INSTALL_UI_CUSTOMIZATION_HOOK_FAILED:
   en-US: "Failed to install UI customization hook"

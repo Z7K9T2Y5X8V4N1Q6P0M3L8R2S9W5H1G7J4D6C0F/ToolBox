@@ -5,7 +5,8 @@
 //! and the UI hook must be installed before any window is created.
 
 use crate::config::{AppConfig, AppLanguage};
-use crate::{error, ui};
+use crate::error::panic::install_panic_hook;
+use crate::ui::window::hook::install_ui_customization_hook;
 
 /// Run all initialization steps in the correct order.
 ///
@@ -21,8 +22,8 @@ use crate::{error, ui};
 pub fn initialize_application() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
     setup_initial_locale();
-    ui::window::hook::install_ui_customization_hook();
-    error::panic::install_panic_hook();
+    install_ui_customization_hook();
+    install_panic_hook();
     setup_config_locale();
 }
 

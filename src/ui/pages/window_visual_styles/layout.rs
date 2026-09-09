@@ -1,14 +1,25 @@
-//! DPI-aware layout constants and calculators for the window visual styles page.
+//! DPI-aware layout constants, calculators, and header visual indicator utilities.
 //!
 //! All raw pixel constants are defined at 96 DPI (100% scaling).
 //! [`gui::dpi_x`] and [`gui::dpi_y`] scale them to the actual display DPI
 //! at runtime, so the layout looks correct at any scaling factor.
 
 use rust_i18n::t;
-use winsafe::{
-    HFONT, HWND, NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo, co, guard::DeleteObjectGuard,
-    gui,
+use windows::Win32::{
+    Foundation::{LPARAM, WPARAM},
+    UI::{
+        Controls::{
+            HDF_SORTDOWN, HDF_SORTUP, HDI_FORMAT, HDITEMW, HDM_GETITEMCOUNT, HDM_GETITEMW,
+            HDM_SETITEMW, LVM_GETHEADER,
+        },
+        WindowsAndMessaging::SendMessageW,
+    },
 };
+use winsafe::{
+    HFONT, NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo, co, guard::DeleteObjectGuard, gui,
+};
+
+use super::process::{ProcessSortConfig, SortDirection};
 
 // ---------------------------------------------------------------------------
 // Raw pixel constants at 96 DPI
@@ -54,6 +65,81 @@ pub(super) fn calculate_process_listview_column_widths(
     ProcessListViewColumnWidths {
         process_name_column_width,
         process_id_column_width,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Header Sort Arrow Indicator
+// ---------------------------------------------------------------------------
+
+/// Update the visual sort arrow indicators (▲ / ▼) on the ListView column headers.
+///
+/// Sends `HDM_SETITEMW` to the child Header control of the ListView to apply
+/// `HDF_SORTUP` or `HDF_SORTDOWN` to the currently active sort column, while clearing
+/// any sort flags from non-active columns.
+pub(super) fn update_listview_header_sort_indicator(
+    listview_hwnd: &winsafe::HWND,
+    sort_config: ProcessSortConfig,
+) {
+    let raw_listview_hwnd = windows::Win32::Foundation::HWND(listview_hwnd.ptr());
+
+    // Retrieve the child Header control handle from the ListView.
+    let header_hwnd_pointer =
+        unsafe { SendMessageW(raw_listview_hwnd, LVM_GETHEADER, WPARAM(0), LPARAM(0)) };
+    // If the list-view control does not have a header control, the return value is NULL(0).
+    if header_hwnd_pointer.0 == 0 {
+        return;
+    }
+
+    let raw_header_hwnd =
+        windows::Win32::Foundation::HWND(header_hwnd_pointer.0 as *mut std::ffi::c_void);
+
+    let active_column_index = sort_config.column.to_column_index();
+
+    let total_column_count =
+        unsafe { SendMessageW(raw_header_hwnd, HDM_GETITEMCOUNT, WPARAM(0), LPARAM(0)) }.0 as usize;
+    if total_column_count <= 0 {
+        return;
+    }
+
+    for column_index in 0..=total_column_count {
+        let mut header_item = HDITEMW {
+            mask: HDI_FORMAT,
+            ..Default::default()
+        };
+
+        // Query the current format of the header column item.
+        let fetch_format_result = unsafe {
+            SendMessageW(
+                raw_header_hwnd,
+                HDM_GETITEMW,
+                WPARAM(column_index),
+                LPARAM(std::ptr::from_mut(&mut header_item) as isize),
+            )
+        };
+        if fetch_format_result.0 == 0 {
+            continue;
+        }
+
+        // Strip both sort arrow flags before applying new state.
+        let sort_flags_mask = HDF_SORTUP.0 | HDF_SORTDOWN.0;
+        header_item.fmt.0 &= !sort_flags_mask;
+
+        if column_index == active_column_index {
+            match sort_config.direction {
+                SortDirection::Ascending => header_item.fmt.0 |= HDF_SORTUP.0,
+                SortDirection::Descending => header_item.fmt.0 |= HDF_SORTDOWN.0,
+            }
+        }
+
+        unsafe {
+            SendMessageW(
+                raw_header_hwnd,
+                HDM_SETITEMW,
+                WPARAM(column_index),
+                LPARAM(std::ptr::from_ref(&header_item) as isize),
+            );
+        }
     }
 }
 
@@ -115,7 +201,7 @@ impl WindowVisualStylesPageLayout {
 }
 
 /// Calculates the ideal vertical dimension for a single-line Edit control.
-pub(super) fn calculate_edit_ideal_height(edit_hwnd: &HWND) -> i32 {
+pub(super) fn calculate_edit_ideal_height(edit_hwnd: &winsafe::HWND) -> i32 {
     let explicit_font = unsafe { edit_hwnd.SendMessage(winsafe::msg::WmGetFont {}) };
     let fallback_font_guard = explicit_font.is_none().then(create_fallback_font);
 

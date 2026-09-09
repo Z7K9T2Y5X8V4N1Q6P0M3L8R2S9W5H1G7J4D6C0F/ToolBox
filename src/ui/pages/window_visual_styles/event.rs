@@ -8,8 +8,11 @@ use std::{cell::RefCell, rc::Rc};
 use rust_i18n::t;
 use winsafe::{HIMAGELIST, SIZE, WString, co, gui, msg, prelude::*};
 
-use super::layout::{WindowVisualStylesPageLayout, calculate_process_listview_column_widths};
-use super::process::{ProcessItem, ProcessManager};
+use super::layout::{
+    WindowVisualStylesPageLayout, calculate_process_listview_column_widths,
+    update_listview_header_sort_indicator,
+};
+use super::process::{ProcessItem, ProcessManager, SortColumn};
 use crate::ui::tab::layout as tab_layout;
 
 /// Unique Win32 timer ID for refreshing the process list.
@@ -29,13 +32,13 @@ pub(super) fn setup_all_events(
     tab_page: &gui::TabPage,
     edit: &gui::Edit,
     listview: &gui::ListView,
+    process_manager: &Rc<RefCell<ProcessManager>>,
 ) {
-    let process_manager = Rc::new(RefCell::new(ProcessManager::new()));
-
     tab_layout::paint_tab_page_background(tab_page);
     setup_resize_event(tab_page, edit, listview);
-    setup_page_initialization_event(tab_page, edit, listview, &process_manager);
-    setup_timer_refresh_event(tab_page, listview, &process_manager);
+    setup_page_initialization_event(tab_page, edit, listview, process_manager);
+    setup_column_click_event(listview, process_manager);
+    setup_timer_refresh_event(tab_page, listview, process_manager);
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +52,8 @@ pub(super) fn setup_all_events(
 /// 1. Configure the ListView item height by binding a custom-dimension dummy ImageList.
 /// 2. Set the edit control's cue banner (placeholder).
 /// 3. Fetch the initial snapshot of system processes and populate the ListView.
-/// 4. Start the periodic 1-second Win32 timer for ongoing background refreshes.
+/// 4. Display the initial sorting arrow on the header.
+/// 5. Start the periodic 1-second Win32 timer for ongoing background refreshes.
 fn setup_page_initialization_event(
     tab_page: &gui::TabPage,
     edit: &gui::Edit,
@@ -77,10 +81,17 @@ fn setup_page_initialization_event(
         }
 
         // Step 3: Populate initial process list snapshot.
-        let initial_processes = cloned_process_manager.borrow_mut().fetch_sorted_processes();
+        let mut borrowed_process_manager = cloned_process_manager.borrow_mut();
+        let initial_processes = borrowed_process_manager.fetch_sorted_processes();
         apply_process_list_to_view(&cloned_listview, &initial_processes)?;
 
-        // Step 4: Start auto-refresh timer.
+        // Step 4: Apply the initial sorting arrow on the header.
+        update_listview_header_sort_indicator(
+            cloned_listview.hwnd(),
+            borrowed_process_manager.current_sort_config(),
+        );
+
+        // Step 5: Start auto-refresh timer.
         cloned_tab_page.hwnd().SetTimer(
             PROCESS_REFRESH_TIMER_ID,
             PROCESS_REFRESH_INTERVAL_MS,
@@ -113,6 +124,42 @@ fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyResult<()> {
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Column Click Sorting
+// ---------------------------------------------------------------------------
+
+/// Register the `LVN_COLUMNCLICK` notification handler on the ListView control.
+///
+/// When the user clicks a column header:
+/// 1. The sort configuration is toggled (switches column or inverts sort direction).
+/// 2. The processes are re-sorted according to the new configuration.
+/// 3. The ListView rows are immediately updated to reflect the new order.
+/// 4. The header indicator arrow is updated to reflect the active sort column and direction.
+fn setup_column_click_event(
+    listview: &gui::ListView,
+    process_manager: &Rc<RefCell<ProcessManager>>,
+) {
+    let cloned_listview = listview.clone();
+    let cloned_process_manager = process_manager.clone();
+
+    listview.on().lvn_column_click(move |column_click_info| {
+        let clicked_column_index = column_click_info.iSubItem as usize;
+
+        if let Some(sort_column) = SortColumn::from_column_index(clicked_column_index) {
+            let mut process_manager = cloned_process_manager.borrow_mut();
+            process_manager.toggle_sort_by_column(sort_column);
+
+            let current_sort_config = process_manager.current_sort_config();
+            let updated_processes = process_manager.fetch_sorted_processes();
+
+            apply_process_list_to_view(&cloned_listview, &updated_processes)?;
+            update_listview_header_sort_indicator(cloned_listview.hwnd(), current_sort_config);
+        }
+
+        Ok(())
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +247,7 @@ fn apply_dynamic_column_widths(
 
 /// Apply a sorted process snapshot list to the ListView control smoothly.
 ///
-/// Uses `WM_SETREDRAW` to prevent screen flickering during update and preserves
+/// Uses in-place cell updates to prevent screen flickering during update and preserves
 /// the previously selected process ID across refreshes.
 fn apply_process_list_to_view(
     listview: &gui::ListView,

@@ -4,7 +4,7 @@
 //! pages lives here. Also provides shared helpers used by page-level event
 //! handlers for control repositioning and Z-order management.
 
-use winsafe::{HBRUSH, HWND, HwndPlace, POINT, RECT, SIZE, co, gui, msg, prelude::*};
+use winsafe::{HBRUSH, HwndPlace, POINT, RECT, SIZE, co, gui, msg, prelude::*};
 
 const TAB_CONTROL_MARGIN: i32 = 10;
 
@@ -74,7 +74,9 @@ pub(crate) fn resize_current_tab_page(
 /// at the top of the tab control. `TCM_ADJUSTRECT` with `display_rect = false`
 /// converts the full tab control rect into the smaller content area beneath
 /// the header, which is where the tab pages actually live.
-pub(crate) fn calculate_tab_page_rect(tab_control_hwnd: &HWND) -> winsafe::AnyResult<RECT> {
+pub(crate) fn calculate_tab_page_rect(
+    tab_control_hwnd: &winsafe::HWND,
+) -> winsafe::AnyResult<RECT> {
     let tab_control_parent_hwnd = tab_control_hwnd.GetParent()?;
 
     let mut tab_page_rect =
@@ -95,7 +97,7 @@ pub(crate) fn calculate_tab_page_rect(tab_control_hwnd: &HWND) -> winsafe::AnyRe
 /// Uses `SWP_NOZORDER | SWP_NOCOPYBITS` to avoid unnecessary repaints
 /// and Z-order changes.
 pub(crate) fn reposition_and_resize_control(
-    control_hwnd: &HWND,
+    control_hwnd: &winsafe::HWND,
     position: POINT,
     size: SIZE,
 ) -> winsafe::AnyResult<()> {
@@ -112,7 +114,7 @@ pub(crate) fn reposition_and_resize_control(
 ///
 /// Used to ensure the scrollable panel renders above the group box frame
 /// so its scrollbar remains clickable.
-pub(crate) fn bring_control_to_top(control_hwnd: &HWND) -> winsafe::AnyResult<()> {
+pub(crate) fn bring_control_to_top(control_hwnd: &winsafe::HWND) -> winsafe::AnyResult<()> {
     control_hwnd.SetWindowPos(
         HwndPlace::Place(co::HWND_PLACE::TOP),
         POINT::default(),

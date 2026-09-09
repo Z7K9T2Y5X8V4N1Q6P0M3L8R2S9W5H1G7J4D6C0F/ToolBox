@@ -3,18 +3,23 @@
 //! Owns all controls and exposes only the operations the rest of the
 //! application needs: construction and locale-driven text updates.
 
+use std::{cell::RefCell, rc::Rc};
+
 use rust_i18n::t;
 use winsafe::{WString, gui, msg, prelude::*};
 
+use super::process::ProcessManager;
+
 /// The window visual styles tab page.
 ///
-/// Cloning is cheap — all inner fields are reference-counted WinSafe handles.
+/// Cloning is cheap — all inner fields are reference-counted WinSafe handles or `Rc` pointers.
 /// The [`From`] impl allows this to be handed directly to [`gui::Tab`] pages.
 #[derive(Clone)]
 pub struct WindowVisualStylesPage {
     tab_page: gui::TabPage,
     edit: gui::Edit,
     listview: gui::ListView,
+    process_manager: Rc<RefCell<ProcessManager>>,
 }
 
 impl From<WindowVisualStylesPage> for gui::TabPage {
@@ -29,22 +34,25 @@ impl WindowVisualStylesPage {
     /// Must be called before the message loop starts, on the same thread as
     /// the parent window.
     pub fn new(parent_window: &(impl GuiParent + 'static)) -> Self {
+        let process_manager = Rc::new(RefCell::new(ProcessManager::new()));
         let tab_page = super::build::create_tab_page(parent_window);
         let edit = super::build::create_edit(&tab_page);
         let listview = super::build::create_listview(&tab_page);
 
-        super::event::setup_all_events(&tab_page, &edit, &listview);
+        super::event::setup_all_events(&tab_page, &edit, &listview, &process_manager);
 
         Self {
             tab_page,
             edit,
             listview,
+            process_manager,
         }
     }
 
     /// Re-translate all visible text labels to the current locale.
     ///
-    /// Updates the Edit cue banner and the ListView column headers.
+    /// Updates the Edit cue banner, the ListView column headers, and re-applies the
+    /// active sort indicator arrow to the header.
     pub fn update_texts(&self) -> winsafe::AnyResult<()> {
         // 1. Update Edit cue banner
         unsafe {

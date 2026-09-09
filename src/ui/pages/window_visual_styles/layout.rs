@@ -115,65 +115,87 @@ pub(super) fn update_listview_header_sort_indicator(
     listview_hwnd: &winsafe::HWND,
     sort_config: ProcessSortConfig,
 ) {
-    let raw_listview_hwnd = windows::Win32::Foundation::HWND(listview_hwnd.ptr());
-
-    // Retrieve the child Header control handle from the ListView.
-    let header_hwnd_pointer =
-        unsafe { SendMessageW(raw_listview_hwnd, LVM_GETHEADER, WPARAM(0), LPARAM(0)) };
-    // If the list-view control does not have a header control, the return value is NULL(0).
-    if header_hwnd_pointer.0 == 0 {
+    let Some(listview_header_hwnd) = retrieve_listview_header_hwnd(listview_hwnd) else {
         return;
-    }
+    };
 
-    let raw_header_hwnd =
-        windows::Win32::Foundation::HWND(header_hwnd_pointer.0 as *mut std::ffi::c_void);
-
+    let total_column_count = fetch_header_column_count(listview_header_hwnd);
     let active_column_index = sort_config.column.to_column_index();
+    for column_index in 0..total_column_count {
+        let target_sort_direction =
+            (column_index == active_column_index).then_some(sort_config.direction);
+        update_column_header_sort_indicator(
+            listview_header_hwnd,
+            column_index,
+            target_sort_direction,
+        );
+    }
+}
 
-    let total_column_count =
-        unsafe { SendMessageW(raw_header_hwnd, HDM_GETITEMCOUNT, WPARAM(0), LPARAM(0)) }.0 as usize;
-    if total_column_count <= 0 {
+/// Retrieve the child Header control handle from the ListView control.
+fn retrieve_listview_header_hwnd(
+    listview_hwnd: &winsafe::HWND,
+) -> Option<windows::Win32::Foundation::HWND> {
+    let raw_listview_hwnd = windows::Win32::Foundation::HWND(listview_hwnd.ptr());
+    let listview_header_hwnd_result =
+        unsafe { SendMessageW(raw_listview_hwnd, LVM_GETHEADER, WPARAM(0), LPARAM(0)) };
+
+    if listview_header_hwnd_result.0 == 0 {
+        None
+    } else {
+        Some(windows::Win32::Foundation::HWND(
+            listview_header_hwnd_result.0 as *mut std::ffi::c_void,
+        ))
+    }
+}
+
+/// Query the total number of columns currently present in the Header control.
+fn fetch_header_column_count(listview_header_hwnd: windows::Win32::Foundation::HWND) -> usize {
+    let column_count_result =
+        unsafe { SendMessageW(listview_header_hwnd, HDM_GETITEMCOUNT, WPARAM(0), LPARAM(0)) };
+    (column_count_result.0 as usize).max(0)
+}
+
+/// Update or clear the sort direction arrow (▲ / ▼) on a single column header item.
+fn update_column_header_sort_indicator(
+    listview_header_hwnd: windows::Win32::Foundation::HWND,
+    column_index: usize,
+    target_sort_direction: Option<SortDirection>,
+) {
+    let mut header_item = HDITEMW {
+        mask: HDI_FORMAT,
+        ..Default::default()
+    };
+
+    let fetch_format_result = unsafe {
+        SendMessageW(
+            listview_header_hwnd,
+            HDM_GETITEMW,
+            WPARAM(column_index),
+            LPARAM(std::ptr::from_mut(&mut header_item) as isize),
+        )
+    };
+    if fetch_format_result.0 == 0 {
         return;
     }
 
-    for column_index in 0..=total_column_count {
-        let mut header_item = HDITEMW {
-            mask: HDI_FORMAT,
-            ..Default::default()
-        };
+    // Strip both sort arrow flags before applying new state.
+    let stripped_format_flags = header_item.fmt.0 & !(HDF_SORTUP.0 | HDF_SORTDOWN.0);
+    let new_sort_flag = match target_sort_direction {
+        Some(SortDirection::Ascending) => HDF_SORTUP.0,
+        Some(SortDirection::Descending) => HDF_SORTDOWN.0,
+        None => 0,
+    };
 
-        // Query the current format of the header column item.
-        let fetch_format_result = unsafe {
-            SendMessageW(
-                raw_header_hwnd,
-                HDM_GETITEMW,
-                WPARAM(column_index),
-                LPARAM(std::ptr::from_mut(&mut header_item) as isize),
-            )
-        };
-        if fetch_format_result.0 == 0 {
-            continue;
-        }
+    header_item.fmt.0 = stripped_format_flags | new_sort_flag;
 
-        // Strip both sort arrow flags before applying new state.
-        let sort_flags_mask = HDF_SORTUP.0 | HDF_SORTDOWN.0;
-        header_item.fmt.0 &= !sort_flags_mask;
-
-        if column_index == active_column_index {
-            match sort_config.direction {
-                SortDirection::Ascending => header_item.fmt.0 |= HDF_SORTUP.0,
-                SortDirection::Descending => header_item.fmt.0 |= HDF_SORTDOWN.0,
-            }
-        }
-
-        unsafe {
-            SendMessageW(
-                raw_header_hwnd,
-                HDM_SETITEMW,
-                WPARAM(column_index),
-                LPARAM(std::ptr::from_ref(&header_item) as isize),
-            );
-        }
+    unsafe {
+        SendMessageW(
+            listview_header_hwnd,
+            HDM_SETITEMW,
+            WPARAM(column_index),
+            LPARAM(std::ptr::from_ref(&header_item) as isize),
+        );
     }
 }
 

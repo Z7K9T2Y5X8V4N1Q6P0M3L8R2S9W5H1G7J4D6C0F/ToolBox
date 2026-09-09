@@ -152,11 +152,11 @@ fn setup_column_click_event(
         let clicked_column_index = column_click_info.iSubItem as usize;
 
         if let Some(sort_column) = SortColumn::from_column_index(clicked_column_index) {
-            let mut process_manager = cloned_process_manager.borrow_mut();
-            process_manager.toggle_sort_by_column(sort_column);
+            let mut borrowed_process_manager = cloned_process_manager.borrow_mut();
+            borrowed_process_manager.toggle_sort_by_column(sort_column);
 
-            let current_sort_config = process_manager.current_sort_config();
-            let updated_processes = process_manager.fetch_sorted_processes();
+            let current_sort_config = borrowed_process_manager.current_sort_config();
+            let updated_processes = borrowed_process_manager.fetch_sorted_processes();
 
             apply_process_list_to_view(&cloned_listview, &updated_processes)?;
             update_listview_header_sort_indicator(cloned_listview.hwnd(), current_sort_config);
@@ -325,7 +325,7 @@ fn restore_process_selection(
     processes: &[ProcessItem],
     target_process_id: u32,
 ) -> winsafe::AnyResult<()> {
-    let target_index = processes
+    let target_process_row_index = processes
         .iter()
         .position(|process| process.process_id == target_process_id);
 
@@ -333,8 +333,8 @@ fn restore_process_selection(
         selected_item.select(false)?;
     }
 
-    if let Some(target_index) = target_index {
-        let item_handle = listview.items().get(target_index as u32);
+    if let Some(target_process_row_index) = target_process_row_index {
+        let item_handle = listview.items().get(target_process_row_index as u32);
         item_handle.select(true)?;
     }
 

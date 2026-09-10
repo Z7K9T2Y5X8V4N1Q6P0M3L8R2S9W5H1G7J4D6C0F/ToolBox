@@ -234,3 +234,11 @@ CHECKBOX_DISABLE_SMARTSCREEN_DESCRIPTION:
 STATUS_BAR_LISTVIEW_HINT:
   en-US: "Right-click items in the list for more actions"
   zh-CN: "右键点击列表项查看更多操作"
+
+MENU_VISUAL_STYLES_APPLY_BASIC:
+  en-US: "Apply Basic style to non-client area"
+  zh-CN: "将基础样式应用到非客户区域"
+
+MENU_VISUAL_STYLES_APPLY_CLASSIC:
+  en-US: "Apply Classic style to non-client area"
+  zh-CN: "将经典样式应用到非客户区域"

@@ -10,12 +10,16 @@ use std::{
 
 use rust_i18n::t;
 use winsafe::{
-    HIMAGELIST, SIZE, TRACKMOUSEEVENT, TrackMouseEvent, WString, co, gui, msg, prelude::*,
+    GetCursorPos, HIMAGELIST, LVHITTESTINFO, POINT, SIZE, TRACKMOUSEEVENT, TrackMouseEvent,
+    WString, co, gui, msg, prelude::*,
 };
 
 use super::layout::{
     WindowVisualStylesPageLayout, calculate_listview_usable_column_width,
     calculate_process_listview_column_widths, update_listview_header_sort_indicator,
+};
+use super::menu::{
+    IDM_VISUAL_STYLES_APPLY_BASIC, IDM_VISUAL_STYLES_APPLY_CLASSIC, show_process_context_menu,
 };
 use super::process::{ProcessItem, ProcessManager, SortColumn};
 use crate::ui::tab::layout as tab_layout;
@@ -47,6 +51,102 @@ pub(super) fn setup_all_events(
     setup_column_click_event(listview, process_manager);
     setup_timer_refresh_event(tab_page, listview, process_manager);
     setup_listview_hover_event(listview, status_bar);
+    setup_context_menu_event(tab_page, listview);
+    setup_context_menu_command_events(tab_page, listview);
+}
+
+// ---------------------------------------------------------------------------
+// Context Menu Events
+// ---------------------------------------------------------------------------
+
+/// Register the right-click event on the ListView to display the context menu.
+///
+/// Uses WinSafe's [`msg::LvmHitTest`] to inspect the item under the cursor. If an
+/// item is hit, it is highlighted and selected, and the popup menu is displayed.
+/// If the user right-clicks on an empty area, no menu is shown.
+fn setup_context_menu_event(tab_page: &gui::TabPage, listview: &gui::ListView) {
+    let cloned_listview = listview.clone();
+    let cloned_tab_page = tab_page.clone();
+
+    listview
+        .on_subclass()
+        .wm_r_button_down(move |mouse_event_params| {
+            let click_position_client = mouse_event_params.coords;
+
+            if let Some(target_item_index) =
+                hit_test_listview_item(&cloned_listview, click_position_client)
+            {
+                select_single_listview_item(&cloned_listview, target_item_index)?;
+
+                let cursor_screen_position = GetCursorPos()?;
+                show_process_context_menu(cloned_tab_page.hwnd(), cursor_screen_position)?;
+            }
+
+            Ok(())
+        });
+}
+
+/// Register command handlers for context menu options.
+fn setup_context_menu_command_events(tab_page: &gui::TabPage, listview: &gui::ListView) {
+    let cloned_listview_for_basic = listview.clone();
+    tab_page
+        .on()
+        .wm_command_acc_menu(IDM_VISUAL_STYLES_APPLY_BASIC, move || {
+            if let Some(selected_process_id) =
+                get_currently_selected_process_id(&cloned_listview_for_basic)
+            {
+                // Placeholder: Apply basic visual style to the target process.
+                let _ = selected_process_id;
+            }
+            Ok(())
+        });
+
+    let cloned_listview_for_classic = listview.clone();
+    tab_page
+        .on()
+        .wm_command_acc_menu(IDM_VISUAL_STYLES_APPLY_CLASSIC, move || {
+            if let Some(selected_process_id) =
+                get_currently_selected_process_id(&cloned_listview_for_classic)
+            {
+                // Placeholder: Apply classic visual style to the target process.
+                let _ = selected_process_id;
+            }
+            Ok(())
+        });
+}
+
+/// Perform a hit test on the ListView at the given client-relative coordinates using WinSafe.
+///
+/// Returns the zero-based index of the item under the cursor if hit, or `None` if
+/// the click was outside any item (e.g. empty background space).
+fn hit_test_listview_item(listview: &gui::ListView, client_coords: POINT) -> Option<u32> {
+    let mut hit_test_info = LVHITTESTINFO::default();
+    hit_test_info.pt = client_coords;
+
+    let hit_test_index = unsafe {
+        listview.hwnd().SendMessage(msg::LvmHitTest {
+            info: &mut hit_test_info,
+        })
+    };
+
+    let is_on_item = hit_test_info.flags.has(co::LVHT::ONITEM);
+    if is_on_item { hit_test_index } else { None }
+}
+
+/// Unselect all currently selected rows and select the item at the specified index.
+fn select_single_listview_item(
+    listview: &gui::ListView,
+    item_index: u32,
+) -> winsafe::AnyResult<()> {
+    for selected_item in listview.items().iter_selected() {
+        selected_item.select(false)?;
+    }
+
+    let target_item = listview.items().get(item_index);
+    target_item.select(true)?;
+    target_item.focus()?;
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +518,7 @@ fn restore_process_selection(
     if let Some(target_process_row_index) = target_process_row_index {
         let item_handle = listview.items().get(target_process_row_index as u32);
         item_handle.select(true)?;
+        item_handle.focus()?;
     }
 
     Ok(())

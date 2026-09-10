@@ -22,14 +22,16 @@
 //!
 //! # Module Structure
 //! - [`build`]   — constructs all controls (tab page, edit, listview)
-//! - [`event`]   — registers all event handlers (resize, cue banner, process auto-refresh)
+//! - [`event`]   — registers all event handlers (resize, cue banner, process auto-refresh, context menu)
 //! - [`layout`]  — DPI-aware layout constants, dynamic font metrics height calculation, and position calculators
+//! - [`menu`]    — popup context menu construction and command definitions for ListView items
 //! - [`page`]    — [`WindowVisualStylesPage`] struct: public API for construction
 //! - [`process`] — system process snapshot queries and sorting logic powered by `sysinfo`
 
 mod build;
 mod event;
 mod layout;
+pub mod menu;
 mod page;
 pub mod process;
 

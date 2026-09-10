@@ -44,7 +44,7 @@ pub(super) fn create_listview(parent_window: &gui::TabPage) -> gui::ListView {
     gui::ListView::new(
         parent_window,
         gui::ListViewOpts {
-            control_style: co::LVS::REPORT | co::LVS::SINGLESEL,
+            control_style: co::LVS::REPORT | co::LVS::SINGLESEL | co::LVS::SHOWSELALWAYS,
             control_ex_style: co::LVS_EX::FULLROWSELECT
                 | co::LVS_EX::GRIDLINES
                 | co::LVS_EX::DOUBLEBUFFER,

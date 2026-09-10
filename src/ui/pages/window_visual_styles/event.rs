@@ -134,10 +134,15 @@ fn hit_test_listview_item(listview: &gui::ListView, client_coords: POINT) -> Opt
 }
 
 /// Unselect all currently selected rows and select the item at the specified index.
+///
+/// Ensures the ListView control itself acquires window-level focus so that the
+/// selection highlight is immediately rendered with the active system accent color.
 fn select_single_listview_item(
     listview: &gui::ListView,
     item_index: u32,
 ) -> winsafe::AnyResult<()> {
+    listview.hwnd().SetFocus();
+
     for selected_item in listview.items().iter_selected() {
         selected_item.select(false)?;
     }

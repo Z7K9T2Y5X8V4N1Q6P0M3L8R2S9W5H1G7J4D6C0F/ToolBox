@@ -43,6 +43,7 @@ pub(super) fn setup_all_events(
     tab_layout::paint_tab_page_background(tab_page);
     setup_resize_event(tab_page, edit, listview);
     setup_page_initialization_event(tab_page, edit, listview, process_manager);
+    setup_edit_filter_event(edit, listview, process_manager);
     setup_column_click_event(listview, process_manager);
     setup_timer_refresh_event(tab_page, listview, process_manager);
     setup_listview_hover_event(listview, status_bar);
@@ -135,6 +136,37 @@ fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyResult<()> {
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Edit Filter Change Event
+// ---------------------------------------------------------------------------
+
+/// Register the `EN_CHANGE` event on the edit control to filter the ListView.
+///
+/// When the user inputs or clears text:
+/// 1. The input string is read from the edit control.
+/// 2. The search filter is updated in [`ProcessManager`].
+/// 3. The process snapshot is filtered and refreshed immediately in the ListView.
+fn setup_edit_filter_event(
+    edit: &gui::Edit,
+    listview: &gui::ListView,
+    process_manager: &Rc<RefCell<ProcessManager>>,
+) {
+    let cloned_edit = edit.clone();
+    let cloned_listview = listview.clone();
+    let cloned_process_manager = process_manager.clone();
+
+    edit.on().en_change(move || {
+        let filter_keyword = cloned_edit.hwnd().GetWindowText()?;
+        let mut borrowed_process_manager = cloned_process_manager.borrow_mut();
+        borrowed_process_manager.set_search_filter(&filter_keyword);
+
+        let filtered_processes = borrowed_process_manager.fetch_sorted_processes();
+        apply_process_list_to_view(&cloned_listview, &filtered_processes)?;
+
+        Ok(())
+    });
 }
 
 // ---------------------------------------------------------------------------

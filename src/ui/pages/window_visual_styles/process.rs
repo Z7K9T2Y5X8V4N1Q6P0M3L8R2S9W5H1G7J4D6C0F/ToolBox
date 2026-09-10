@@ -1,7 +1,8 @@
-//! System process information retrieval and sorting.
+//! System process information retrieval, filtering, and sorting.
 //!
 //! Owns the [`sysinfo::System`] instance and provides utilities to fetch,
-//! sort, and format the current list of running processes for display in the UI.
+//! filter by name or PID, sort, and format the current list of running
+//! processes for display in the UI.
 
 use std::cmp::Ordering;
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
@@ -97,6 +98,7 @@ pub struct ProcessItem {
 pub struct ProcessManager {
     system_monitor: System,
     sort_config: ProcessSortConfig,
+    search_filter: String,
 }
 
 impl ProcessManager {
@@ -105,6 +107,7 @@ impl ProcessManager {
         Self {
             system_monitor: System::new(),
             sort_config: ProcessSortConfig::default(),
+            search_filter: String::new(),
         }
     }
 
@@ -113,12 +116,17 @@ impl ProcessManager {
         self.sort_config
     }
 
+    /// Update the active search filter query.
+    pub fn set_search_filter(&mut self, search_query: &str) {
+        self.search_filter = search_query.trim().to_lowercase();
+    }
+
     /// Update the sort configuration based on a clicked column.
     pub fn toggle_sort_by_column(&mut self, clicked_column: SortColumn) {
         self.sort_config.toggle_column(clicked_column);
     }
 
-    /// Refresh the current process list and return the sorted snapshots based on active sort settings.
+    /// Refresh the current process list and return the sorted and filtered snapshots.
     pub fn fetch_sorted_processes(&mut self) -> Vec<ProcessItem> {
         self.system_monitor.refresh_processes_specifics(
             ProcessesToUpdate::All,
@@ -126,17 +134,32 @@ impl ProcessManager {
             ProcessRefreshKind::nothing(),
         );
 
+        let is_filter_active = !self.search_filter.is_empty();
+
         let mut process_list: Vec<ProcessItem> = self
             .system_monitor
             .processes()
             .iter()
-            .map(|(process_id, process)| {
-                let process_id = process_id.as_u32();
-                let process_name = process.name().to_string_lossy().to_string();
-                ProcessItem {
-                    process_id,
-                    process_name,
+            .filter_map(|(process_id, process)| {
+                let process_id_number = process_id.as_u32();
+                let process_name_string = process.name().to_string_lossy().to_string();
+
+                if is_filter_active {
+                    let is_name_matched = process_name_string
+                        .to_lowercase()
+                        .contains(&self.search_filter);
+                    let is_pid_matched =
+                        process_id_number.to_string().contains(&self.search_filter);
+
+                    if !is_name_matched && !is_pid_matched {
+                        return None;
+                    }
                 }
+
+                Some(ProcessItem {
+                    process_id: process_id_number,
+                    process_name: process_name_string,
+                })
             })
             .collect();
 

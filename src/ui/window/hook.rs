@@ -38,11 +38,11 @@ use windows::{
 /// hook in the chain via [`CallNextHookEx`].
 extern "system" fn ui_customization_hook_procedure(
     hook_code: i32,
-    word_parameter: WPARAM,
-    long_parameter: LPARAM,
+    wparam: WPARAM,
+    lparam: LPARAM,
 ) -> LRESULT {
     if hook_code >= 0 {
-        let call_window_procedure_struct = unsafe { &*(long_parameter.0 as *const CWPSTRUCT) };
+        let call_window_procedure_struct = unsafe { &*(lparam.0 as *const CWPSTRUCT) };
 
         if call_window_procedure_struct.message == WM_CREATE {
             // Disable the DWM fade-in transition for this window.
@@ -63,7 +63,7 @@ extern "system" fn ui_customization_hook_procedure(
         }
     }
 
-    unsafe { CallNextHookEx(None, hook_code, word_parameter, long_parameter) }
+    unsafe { CallNextHookEx(None, hook_code, wparam, lparam) }
 }
 
 /// Install the UI customization hook on the current thread.

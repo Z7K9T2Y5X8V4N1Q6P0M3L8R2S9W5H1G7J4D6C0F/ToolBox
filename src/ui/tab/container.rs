@@ -47,12 +47,8 @@ impl TabContainer {
 
     /// Resize the tab control and the currently visible page to fit the
     /// available client area. Called on every WM_SIZE of the main window.
-    pub fn resize(
-        &self,
-        window_client_width: i32,
-        window_client_height: i32,
-    ) -> winsafe::AnyResult<()> {
-        layout::resize_tab_control(&self.tab_control, window_client_width, window_client_height)?;
+    pub fn resize(&self, client_width: i32, client_height: i32) -> winsafe::AnyResult<()> {
+        layout::resize_tab_control(&self.tab_control, client_width, client_height)?;
         layout::resize_current_tab_page(&self.tab_control, &self.tab_pages)?;
         Ok(())
     }
@@ -75,6 +71,12 @@ impl TabContainer {
     pub fn update_page_contents(&self) -> winsafe::AnyResult<()> {
         self.settings_page.update_texts()?;
         self.window_visual_styles_page.update_texts()?;
+        Ok(())
+    }
+
+    /// Notify all hosted pages that the system UI font has changed.
+    pub fn handle_font_changed(&self) -> winsafe::AnyResult<()> {
+        self.window_visual_styles_page.handle_font_changed()?;
         Ok(())
     }
 }

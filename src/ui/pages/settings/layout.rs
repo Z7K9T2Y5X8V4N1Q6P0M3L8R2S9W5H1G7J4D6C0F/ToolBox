@@ -4,6 +4,7 @@
 //! [`gui::dpi_x`] and [`gui::dpi_y`] scale them to the actual display DPI
 //! at runtime, so the layout looks correct at any scaling factor.
 
+use rust_i18n::t;
 use winsafe::{POINT, SIZE, gui};
 
 // ---------------------------------------------------------------------------
@@ -60,10 +61,25 @@ pub(super) struct CheckboxLayoutCalculator {
 }
 
 impl CheckboxLayoutCalculator {
-    /// Create a new calculator with all values scaled to the current DPI.
+    /// Create a new calculator with all values scaled to current DPI and active system font height.
     pub fn new() -> Self {
+        let mut non_client_metrics = winsafe::NONCLIENTMETRICS::default();
+        unsafe {
+            winsafe::SystemParametersInfo(
+                winsafe::co::SPI::GETNONCLIENTMETRICS,
+                size_of::<winsafe::NONCLIENTMETRICS>() as u32,
+                &mut non_client_metrics,
+                winsafe::co::SPIF::NoValue,
+            )
+        }
+        .unwrap_or_else(|_| panic!("{}", t!("ERROR_GET_NONCLIENTMETRICS_FAILED")));
+
+        let font_pixel_height = non_client_metrics.lfMessageFont.lfHeight.abs();
+        let dynamic_checkbox_height =
+            (font_pixel_height + gui::dpi_y(6)).max(gui::dpi_y(CHECKBOX_HEIGHT));
+
         Self {
-            checkbox_height: gui::dpi_y(CHECKBOX_HEIGHT),
+            checkbox_height: dynamic_checkbox_height,
             checkbox_vertical_gap: gui::dpi_y(CHECKBOX_VERTICAL_GAP),
             checkbox_left_margin: gui::dpi_x(CHECKBOX_LEFT_MARGIN),
             checkbox_right_margin: gui::dpi_x(CHECKBOX_RIGHT_MARGIN),

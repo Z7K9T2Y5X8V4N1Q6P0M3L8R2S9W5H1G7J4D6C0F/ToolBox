@@ -22,6 +22,7 @@ pub struct MainWindow {
     pub(crate) pending_error_message: Rc<RefCell<Option<String>>>,
     pub(crate) tab_container: ui::tab::container::TabContainer,
     pub(crate) status_bar: gui::StatusBar,
+    pub(crate) font_manager: Rc<RefCell<ui::font::FontManager>>,
 }
 
 impl MainWindow {
@@ -41,12 +42,14 @@ impl MainWindow {
 
         let status_bar = ui::statusbar::create_status_bar(&main_window);
         let tab_container = ui::tab::container::TabContainer::new(&main_window, status_bar.clone());
+        let font_manager = Rc::new(RefCell::new(ui::font::FontManager::new()));
 
         let main_window_instance = Self {
             main_window,
             pending_error_message: Rc::new(RefCell::new(None)),
             tab_container,
             status_bar,
+            font_manager,
         };
 
         super::event::register_all_events(&main_window_instance)?;

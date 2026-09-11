@@ -219,25 +219,49 @@ fn setup_page_initialization_event(
     });
 }
 
+/// Calculate appropriate row height based on active font metrics and DPI scaling.
+pub(super) fn calculate_listview_row_height(listview_hwnd: &winsafe::HWND) -> i32 {
+    let device_context = listview_hwnd
+        .GetDC()
+        .unwrap_or_else(|_| panic!("{}", t!("ERROR_GET_DEVICE_CONTEXT_FAILED")));
+
+    let text_metric = device_context
+        .GetTextMetrics()
+        .unwrap_or_else(|_| panic!("{}", t!("ERROR_GET_TEXT_METRICS_FAILED")));
+
+    let font_height = text_metric.tmHeight + text_metric.tmExternalLeading;
+    let base_row_height = gui::dpi_y(LISTVIEW_ROW_HEIGHT_RAW);
+
+    (font_height + gui::dpi_y(8)).max(base_row_height)
+}
+
 /// Enlarge the row height of the ListView control to a modern visual spacing.
 ///
 /// Win32 ListView items in report mode derive their vertical height from either the
 /// font line-height or the attached `LVSIL_SMALL` ImageList. Attaching a 1-pixel-wide
 /// ImageList with a DPI-scaled height of 30px stretches the entire row without
 /// requiring custom drawing.
-fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyResult<()> {
-    let row_height = gui::dpi_y(LISTVIEW_ROW_HEIGHT_RAW);
+pub(super) fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyResult<()> {
+    let row_height = calculate_listview_row_height(listview.hwnd());
     let dummy_image_size = SIZE::with(1, row_height);
 
     // Create the dummy ImageList with the specified DPI-scaled height and leak the guard
     // so the control can take permanent ownership of the handle.
     let image_list = HIMAGELIST::Create(dummy_image_size, co::ILC::COLOR32, 0, 0)?.leak();
 
-    unsafe {
+    let previous_image_list = unsafe {
         listview.hwnd().SendMessage(msg::LvmSetImageList {
             kind: co::LVSIL::SMALL,
-            himagelist: Some(image_list.raw_copy()),
-        });
+            himagelist: Some(image_list),
+        })
+    };
+
+    if let Some(old_image_list) = previous_image_list {
+        let raw_image_list_handle =
+            windows::Win32::UI::Controls::HIMAGELIST(old_image_list.ptr() as isize);
+        unsafe {
+            let _ = windows::Win32::UI::Controls::ImageList_Destroy(raw_image_list_handle);
+        }
     }
 
     Ok(())

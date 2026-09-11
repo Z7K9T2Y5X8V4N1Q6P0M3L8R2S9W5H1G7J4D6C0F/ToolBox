@@ -78,4 +78,10 @@ impl WindowVisualStylesPage {
 
         Ok(())
     }
+
+    /// Notify the page that the system UI font has changed.
+    pub fn handle_font_changed(&self) -> winsafe::AnyResult<()> {
+        super::event::apply_custom_row_height(&self.listview)?;
+        Ok(())
+    }
 }

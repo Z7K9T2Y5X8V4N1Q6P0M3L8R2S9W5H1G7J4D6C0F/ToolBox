@@ -63,12 +63,12 @@ pub(super) struct ProcessListViewColumnWidths {
 /// and a small safety margin to prevent rounding artifacts or grid line borders from causing
 /// a horizontal scrollbar.
 pub(super) fn calculate_listview_usable_column_width(listview_hwnd: &winsafe::HWND) -> i32 {
-    let client_rectangle = match listview_hwnd.GetClientRect() {
-        Ok(client_rectangle) => client_rectangle,
+    let client_rect = match listview_hwnd.GetClientRect() {
+        Ok(client_rect) => client_rect,
         Err(_) => return 0,
     };
 
-    let mut available_width = client_rectangle.right - client_rectangle.left;
+    let mut available_width = client_rect.right - client_rect.left;
 
     // Win32 behavior: If a window has WS_VSCROLL active, GetClientRect() already
     // automatically subtracts the vertical scrollbar width (SM_CXVSCROLL).

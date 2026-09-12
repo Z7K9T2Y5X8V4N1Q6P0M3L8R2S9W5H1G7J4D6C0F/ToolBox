@@ -9,20 +9,19 @@ use std::{
 };
 
 use rust_i18n::t;
+use windows::Win32::UI::Controls::{HIMAGELIST as RawHimagelist, ImageList_Destroy};
 use winsafe::{
-    GetCursorPos, HIMAGELIST, LVHITTESTINFO, POINT, SIZE, TRACKMOUSEEVENT, TrackMouseEvent,
-    WString, co, gui, msg, prelude::*,
+    AnyResult, GetCursorPos, HIMAGELIST, HWND, LVHITTESTINFO, POINT, SIZE, TRACKMOUSEEVENT,
+    TrackMouseEvent, WString, co, gui, msg, prelude::*,
 };
 
-use super::layout::{
-    WindowVisualStylesPageLayout, calculate_listview_usable_column_width,
-    calculate_process_listview_column_widths, update_listview_header_sort_indicator,
+use crate::ui::tab;
+
+use super::{
+    layout::{self, WindowVisualStylesPageLayout},
+    menu::{self, IDM_VISUAL_STYLES_APPLY_BASIC, IDM_VISUAL_STYLES_APPLY_CLASSIC},
+    process::{ProcessItem, ProcessManager, SortColumn},
 };
-use super::menu::{
-    IDM_VISUAL_STYLES_APPLY_BASIC, IDM_VISUAL_STYLES_APPLY_CLASSIC, show_process_context_menu,
-};
-use super::process::{ProcessItem, ProcessManager, SortColumn};
-use crate::ui::tab::layout as tab_layout;
 
 /// Unique Win32 timer ID for refreshing the process list.
 const PROCESS_REFRESH_TIMER_ID: usize = 3001;
@@ -44,7 +43,7 @@ pub(super) fn setup_all_events(
     process_manager: &Rc<RefCell<ProcessManager>>,
     status_bar: &gui::StatusBar,
 ) {
-    tab_layout::paint_tab_page_background(tab_page);
+    tab::paint_tab_page_background(tab_page);
     setup_resize_event(tab_page, edit, listview);
     setup_page_initialization_event(tab_page, edit, listview, process_manager);
     setup_edit_filter_event(edit, listview, process_manager);
@@ -79,7 +78,7 @@ fn setup_context_menu_event(tab_page: &gui::TabPage, listview: &gui::ListView) {
                 select_single_listview_item(&cloned_listview, target_item_index)?;
 
                 let cursor_screen_position = GetCursorPos()?;
-                show_process_context_menu(cloned_tab_page.hwnd(), cursor_screen_position)?;
+                menu::show_process_context_menu(cloned_tab_page.hwnd(), cursor_screen_position)?;
             }
 
             Ok(())
@@ -94,10 +93,7 @@ fn setup_context_menu_command_events(tab_page: &gui::TabPage, listview: &gui::Li
         .wm_command_acc_menu(IDM_VISUAL_STYLES_APPLY_BASIC, move || {
             if let Some(selected_process_id) =
                 get_currently_selected_process_id(&cloned_listview_for_basic)
-            {
-                // Placeholder: Apply basic visual style to the target process.
-                let _ = selected_process_id;
-            }
+            {}
             Ok(())
         });
 
@@ -107,10 +103,7 @@ fn setup_context_menu_command_events(tab_page: &gui::TabPage, listview: &gui::Li
         .wm_command_acc_menu(IDM_VISUAL_STYLES_APPLY_CLASSIC, move || {
             if let Some(selected_process_id) =
                 get_currently_selected_process_id(&cloned_listview_for_classic)
-            {
-                // Placeholder: Apply classic visual style to the target process.
-                let _ = selected_process_id;
-            }
+            {}
             Ok(())
         });
 }
@@ -137,10 +130,7 @@ fn hit_test_listview_item(listview: &gui::ListView, client_coords: POINT) -> Opt
 ///
 /// Ensures the ListView control itself acquires window-level focus so that the
 /// selection highlight is immediately rendered with the active system accent color.
-fn select_single_listview_item(
-    listview: &gui::ListView,
-    item_index: u32,
-) -> winsafe::AnyResult<()> {
+fn select_single_listview_item(listview: &gui::ListView, item_index: u32) -> AnyResult<()> {
     listview.hwnd().SetFocus();
 
     for selected_item in listview.items().iter_selected() {
@@ -200,7 +190,7 @@ fn setup_page_initialization_event(
         apply_process_list_to_view(&cloned_listview, &initial_processes)?;
 
         // Step 4: Apply the initial sorting arrow on the header.
-        update_listview_header_sort_indicator(
+        layout::update_listview_header_sort_indicator(
             cloned_listview.hwnd(),
             borrowed_process_manager.current_sort_config(),
         );
@@ -220,7 +210,7 @@ fn setup_page_initialization_event(
 }
 
 /// Calculate appropriate row height based on active font metrics and DPI scaling.
-pub(super) fn calculate_listview_row_height(listview_hwnd: &winsafe::HWND) -> i32 {
+pub(super) fn calculate_listview_row_height(listview_hwnd: &HWND) -> i32 {
     let device_context = listview_hwnd
         .GetDC()
         .unwrap_or_else(|_| panic!("{}", t!("ERROR_GET_DEVICE_CONTEXT_FAILED")));
@@ -241,7 +231,7 @@ pub(super) fn calculate_listview_row_height(listview_hwnd: &winsafe::HWND) -> i3
 /// font line-height or the attached `LVSIL_SMALL` ImageList. Attaching a 1-pixel-wide
 /// ImageList with a DPI-scaled height of 30px stretches the entire row without
 /// requiring custom drawing.
-pub(super) fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyResult<()> {
+pub(super) fn apply_custom_row_height(listview: &gui::ListView) -> AnyResult<()> {
     let row_height = calculate_listview_row_height(listview.hwnd());
     let dummy_image_size = SIZE::with(1, row_height);
 
@@ -257,10 +247,11 @@ pub(super) fn apply_custom_row_height(listview: &gui::ListView) -> winsafe::AnyR
     };
 
     if let Some(old_image_list) = previous_image_list {
-        let raw_image_list_handle =
-            windows::Win32::UI::Controls::HIMAGELIST(old_image_list.ptr() as isize);
-        unsafe {
-            let _ = windows::Win32::UI::Controls::ImageList_Destroy(raw_image_list_handle);
+        let raw_image_list_handle = RawHimagelist(old_image_list.ptr() as isize);
+        let destroy_result = unsafe { ImageList_Destroy(raw_image_list_handle) };
+
+        if !destroy_result.as_bool() {
+            panic!("{}", t!("ERROR_DESTROY_IMAGELIST_FAILED"));
         }
     }
 
@@ -327,7 +318,10 @@ fn setup_column_click_event(
             let updated_processes = borrowed_process_manager.fetch_sorted_processes();
 
             apply_process_list_to_view(&cloned_listview, &updated_processes)?;
-            update_listview_header_sort_indicator(cloned_listview.hwnd(), current_sort_config);
+            layout::update_listview_header_sort_indicator(
+                cloned_listview.hwnd(),
+                current_sort_config,
+            );
         }
 
         Ok(())
@@ -379,7 +373,7 @@ fn setup_listview_hover_event(listview: &gui::ListView, status_bar: &gui::Status
             let mut track_mouse_event_info = TRACKMOUSEEVENT::default();
             track_mouse_event_info.dwFlags = co::TME::LEAVE;
             track_mouse_event_info.hwndTrack =
-                unsafe { winsafe::HWND::from_ptr(cloned_listview_for_mouse_move.hwnd().ptr()) };
+                unsafe { HWND::from_ptr(cloned_listview_for_mouse_move.hwnd().ptr()) };
             TrackMouseEvent(&mut track_mouse_event_info)?;
         }
 
@@ -418,13 +412,13 @@ fn setup_resize_event(tab_page: &gui::TabPage, edit: &gui::Edit, listview: &gui:
             ideal_edit_height,
         );
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_edit.hwnd(),
             window_visual_styles_page_layout.edit_position,
             window_visual_styles_page_layout.edit_size,
         )?;
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_listview.hwnd(),
             window_visual_styles_page_layout.listview_position,
             window_visual_styles_page_layout.listview_size,
@@ -437,9 +431,9 @@ fn setup_resize_event(tab_page: &gui::TabPage, edit: &gui::Edit, listview: &gui:
 }
 
 /// Apply dynamically computed column widths to the ListView.
-fn apply_dynamic_column_widths(listview: &gui::ListView) -> winsafe::AnyResult<()> {
-    let usable_column_width = calculate_listview_usable_column_width(listview.hwnd());
-    let column_widths = calculate_process_listview_column_widths(usable_column_width);
+fn apply_dynamic_column_widths(listview: &gui::ListView) -> AnyResult<()> {
+    let usable_column_width = layout::calculate_listview_usable_column_width(listview.hwnd());
+    let column_widths = layout::calculate_process_listview_column_widths(usable_column_width);
     listview
         .cols()
         .get(0)
@@ -462,7 +456,7 @@ fn apply_dynamic_column_widths(listview: &gui::ListView) -> winsafe::AnyResult<(
 fn apply_process_list_to_view(
     listview: &gui::ListView,
     processes: &[ProcessItem],
-) -> winsafe::AnyResult<()> {
+) -> AnyResult<()> {
     let selected_process_id = get_currently_selected_process_id(listview);
 
     sync_listview_items(listview, processes)?;
@@ -485,10 +479,7 @@ fn get_currently_selected_process_id(listview: &gui::ListView) -> Option<u32> {
 ///
 /// Updates existing rows in place, appends new rows if the process count increased,
 /// or truncates excess rows if the count decreased.
-fn sync_listview_items(
-    listview: &gui::ListView,
-    processes: &[ProcessItem],
-) -> winsafe::AnyResult<()> {
+fn sync_listview_items(listview: &gui::ListView, processes: &[ProcessItem]) -> AnyResult<()> {
     let current_item_count = listview.items().count() as usize;
     let target_item_count = processes.len();
 
@@ -535,7 +526,7 @@ fn restore_process_selection(
     listview: &gui::ListView,
     processes: &[ProcessItem],
     target_process_id: u32,
-) -> winsafe::AnyResult<()> {
+) -> AnyResult<()> {
     let target_process_row_index = processes
         .iter()
         .position(|process| process.process_id == target_process_id);

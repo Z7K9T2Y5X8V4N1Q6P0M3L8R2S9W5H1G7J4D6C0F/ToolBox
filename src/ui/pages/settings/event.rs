@@ -3,12 +3,15 @@
 //! [`setup_all_events`] is the single entry point called from [`SettingsPage::new`].
 //! It wires up every event handler for the settings page in the correct order.
 
-use winsafe::{HwndPlace, POINT, SCROLLINFO, SIZE, co, gui, msg, prelude::*};
+use winsafe::{AnyResult, HwndPlace, POINT, SCROLLINFO, SIZE, co, gui, msg, prelude::*};
 
-use super::layout::{CheckboxLayoutCalculator, SettingsPageLayout};
-use super::state::CheckboxId;
-use crate::ui;
-use crate::ui::tab::layout as tab_layout;
+use crate::ui::{statusbar, tab};
+
+use super::{
+    CheckboxId,
+    layout::{CheckboxLayoutCalculator, SettingsPageLayout},
+    scroll,
+};
 
 /// Wire up all event handlers for the settings page.
 ///
@@ -24,7 +27,7 @@ pub(super) fn setup_all_events(
     button_apply: &gui::Button,
     status_bar: &gui::StatusBar,
 ) {
-    tab_layout::paint_tab_page_background(tab_page);
+    tab::paint_tab_page_background(tab_page);
     setup_resize_event(
         tab_page,
         group_box,
@@ -35,13 +38,13 @@ pub(super) fn setup_all_events(
         button_apply,
     );
 
-    super::scroll::setup_scroll_event(scrollable_panel, content_panel);
-    super::scroll::setup_mousewheel_event(scrollable_panel, content_panel);
+    scroll::setup_scroll_event(scrollable_panel, content_panel);
+    scroll::setup_mousewheel_event(scrollable_panel, content_panel);
 
     setup_button_select_all_toggle_event(button_select_all_toggle, checkboxes);
     setup_button_apply_event(button_apply);
 
-    ui::statusbar::register_hover_events(checkboxes, status_bar);
+    statusbar::register_hover_events(checkboxes, status_bar);
 }
 
 // ---------------------------------------------------------------------------
@@ -71,18 +74,18 @@ fn setup_resize_event(
     tab_page.on().wm_size(move |size_info| {
         // The scrollable panel must sit above the group box in the Z-order so
         // its scrollbar track remains clickable and is not obscured by the frame.
-        tab_layout::bring_control_to_top(cloned_scrollable_panel.hwnd())?;
+        tab::bring_control_to_top(cloned_scrollable_panel.hwnd())?;
 
         let settings_page_layout =
             SettingsPageLayout::calculate(size_info.client_area.cx, size_info.client_area.cy);
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_group_box.hwnd(),
             settings_page_layout.group_box_position,
             settings_page_layout.group_box_size,
         )?;
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_scrollable_panel.hwnd(),
             settings_page_layout.scrollable_panel_position,
             settings_page_layout.scrollable_panel_size,
@@ -94,7 +97,7 @@ fn setup_resize_event(
             layout_calculator.calculate_total_content_height(cloned_checkboxes.len());
         let scrollable_panel_visible_height = settings_page_layout.scrollable_panel_size.cy;
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_content_panel.hwnd(),
             POINT { x: 0, y: 0 },
             SIZE {
@@ -125,13 +128,13 @@ fn setup_resize_event(
             content_panel_total_height,
         )?;
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_button_apply.hwnd(),
             settings_page_layout.button_apply_position,
             settings_page_layout.button_apply_size,
         )?;
 
-        tab_layout::reposition_and_resize_control(
+        tab::reposition_and_resize_control(
             cloned_button_select_all_toggle.hwnd(),
             settings_page_layout.button_select_all_toggle_position,
             settings_page_layout.button_select_all_toggle_size,
@@ -152,7 +155,7 @@ fn update_scrollbar_range(
     content_panel: &gui::WindowControl,
     scrollable_panel_visible_height: i32,
     content_panel_total_height: i32,
-) -> winsafe::AnyResult<()> {
+) -> AnyResult<()> {
     let is_needs_scrollbar = content_panel_total_height > scrollable_panel_visible_height;
     scrollable_panel
         .hwnd()
@@ -182,7 +185,7 @@ fn update_scrollbar_range(
             .hwnd()
             .SetScrollInfo(co::SBB::VERT, &scroll_info, true);
 
-        super::scroll::apply_scroll_position(
+        scroll::apply_scroll_position(
             scrollable_panel,
             content_panel,
             clamped_old_vertical_scroll_position,
@@ -202,7 +205,7 @@ fn update_scrollbar_range(
             .hwnd()
             .SetScrollInfo(co::SBB::VERT, &scroll_info, true);
 
-        super::scroll::apply_scroll_position(scrollable_panel, content_panel, 0)?;
+        scroll::apply_scroll_position(scrollable_panel, content_panel, 0)?;
     }
 
     Ok(())

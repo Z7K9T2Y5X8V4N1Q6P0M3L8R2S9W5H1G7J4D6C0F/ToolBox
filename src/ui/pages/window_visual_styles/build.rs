@@ -5,7 +5,7 @@
 //! controls to be created on the same thread as their parent window.
 
 use rust_i18n::t;
-use winsafe::{co, gui, prelude::*};
+use winsafe::{co, gui, prelude::GuiParent};
 
 /// Create the [`gui::TabPage`] that hosts all window visual styles controls.
 pub(super) fn create_tab_page(parent_window: &(impl GuiParent + 'static)) -> gui::TabPage {

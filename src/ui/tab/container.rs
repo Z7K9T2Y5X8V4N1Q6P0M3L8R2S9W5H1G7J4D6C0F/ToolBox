@@ -5,11 +5,15 @@
 //! WM_SIZE and [`TabContainer::update_tab_control_titles`] /
 //! [`TabContainer::update_page_contents`] on every locale change.
 
+use winsafe::AnyResult;
 use winsafe::gui;
-use winsafe::prelude::*;
+use winsafe::prelude::GuiParent;
 
-use super::{build, layout};
-use crate::ui::pages::{settings::SettingsPage, window_visual_styles::WindowVisualStylesPage};
+use crate::ui::pages::SettingsPage;
+use crate::ui::pages::WindowVisualStylesPage;
+
+use super::build;
+use super::layout;
 
 /// Owns the tab control widget and all tab page instances.
 ///
@@ -47,7 +51,7 @@ impl TabContainer {
 
     /// Resize the tab control and the currently visible page to fit the
     /// available client area. Called on every WM_SIZE of the main window.
-    pub fn resize(&self, client_width: i32, client_height: i32) -> winsafe::AnyResult<()> {
+    pub fn resize(&self, client_width: i32, client_height: i32) -> AnyResult<()> {
         layout::resize_tab_control(&self.tab_control, client_width, client_height)?;
         layout::resize_current_tab_page(&self.tab_control, &self.tab_pages)?;
         Ok(())
@@ -56,7 +60,7 @@ impl TabContainer {
     /// Re-translate all tab title strings to the current locale.
     ///
     /// Called after a language change so the tab headers update immediately.
-    pub fn update_tab_control_titles(&self) -> winsafe::AnyResult<()> {
+    pub fn update_tab_control_titles(&self) -> AnyResult<()> {
         let tab_control_titles = build::get_tab_control_titles();
         for (tab_control_index, tab_control_title) in tab_control_titles.iter().enumerate() {
             let target_tab_control_item = self.tab_control.items().get(tab_control_index as u32);
@@ -68,14 +72,14 @@ impl TabContainer {
     /// Re-translate all text content inside each page to the current locale.
     ///
     /// Called after a language change so page labels update immediately.
-    pub fn update_page_contents(&self) -> winsafe::AnyResult<()> {
+    pub fn update_page_contents(&self) -> AnyResult<()> {
         self.settings_page.update_texts()?;
         self.window_visual_styles_page.update_texts()?;
         Ok(())
     }
 
     /// Notify all hosted pages that the system UI font has changed.
-    pub fn handle_font_changed(&self) -> winsafe::AnyResult<()> {
+    pub fn handle_font_changed(&self) -> AnyResult<()> {
         self.window_visual_styles_page.handle_font_changed()?;
         Ok(())
     }

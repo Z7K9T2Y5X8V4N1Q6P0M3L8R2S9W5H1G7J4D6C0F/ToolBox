@@ -4,9 +4,12 @@
 //! application needs: construction and locale-driven text updates.
 
 use rust_i18n::t;
-use winsafe::{gui, prelude::*};
+use winsafe::{
+    AnyResult, gui,
+    prelude::{GuiParent, GuiWindow},
+};
 
-use super::state::CheckboxId;
+use super::{CheckboxId, build, event};
 
 /// The settings tab page.
 ///
@@ -35,15 +38,15 @@ impl SettingsPage {
     /// Must be called before the message loop starts, on the same thread as
     /// the parent window.
     pub fn new(parent_window: &(impl GuiParent + 'static), status_bar: gui::StatusBar) -> Self {
-        let tab_page = super::build::create_tab_page(parent_window);
-        let group_box = super::build::create_group_box(&tab_page);
-        let scrollable_panel = super::build::create_scrollable_panel(&tab_page);
-        let content_panel = super::build::create_content_panel(&scrollable_panel);
-        let checkboxes = super::build::create_checkboxes(&content_panel);
-        let button_select_all_toggle = super::build::create_button_select_all_toggle(&tab_page);
-        let button_apply = super::build::create_button_apply(&tab_page);
+        let tab_page = build::create_tab_page(parent_window);
+        let group_box = build::create_group_box(&tab_page);
+        let scrollable_panel = build::create_scrollable_panel(&tab_page);
+        let content_panel = build::create_content_panel(&scrollable_panel);
+        let checkboxes = build::create_checkboxes(&content_panel);
+        let button_select_all_toggle = build::create_button_select_all_toggle(&tab_page);
+        let button_apply = build::create_button_apply(&tab_page);
 
-        super::event::setup_all_events(
+        event::setup_all_events(
             &tab_page,
             &group_box,
             &scrollable_panel,
@@ -69,7 +72,7 @@ impl SettingsPage {
     ///
     /// Called by [`crate::ui::tab::container::TabContainer::update_page_contents`]
     /// after a language change.
-    pub fn update_texts(&self) -> winsafe::AnyResult<()> {
+    pub fn update_texts(&self) -> AnyResult<()> {
         self.group_box
             .hwnd()
             .SetWindowText(&t!("GROUP_BOX_SETTINGS_TITLE"))?;

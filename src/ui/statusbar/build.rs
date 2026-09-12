@@ -1,6 +1,6 @@
 //! Status bar control construction.
 
-use winsafe::{gui, prelude::*};
+use winsafe::{gui, prelude::GuiParent};
 
 /// Create a single-part proportional status bar attached to the given parent window.
 ///

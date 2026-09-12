@@ -5,7 +5,7 @@
 //! at runtime, so the layout looks correct at any scaling factor.
 
 use rust_i18n::t;
-use winsafe::{POINT, SIZE, gui};
+use winsafe::{NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo, co, gui};
 
 // ---------------------------------------------------------------------------
 // Raw pixel constants at 96 DPI
@@ -63,13 +63,13 @@ pub(super) struct CheckboxLayoutCalculator {
 impl CheckboxLayoutCalculator {
     /// Create a new calculator with all values scaled to current DPI and active system font height.
     pub fn new() -> Self {
-        let mut non_client_metrics = winsafe::NONCLIENTMETRICS::default();
+        let mut non_client_metrics = NONCLIENTMETRICS::default();
         unsafe {
-            winsafe::SystemParametersInfo(
-                winsafe::co::SPI::GETNONCLIENTMETRICS,
-                size_of::<winsafe::NONCLIENTMETRICS>() as u32,
+            SystemParametersInfo(
+                co::SPI::GETNONCLIENTMETRICS,
+                size_of::<NONCLIENTMETRICS>() as u32,
                 &mut non_client_metrics,
-                winsafe::co::SPIF::NoValue,
+                co::SPIF::NoValue,
             )
         }
         .unwrap_or_else(|_| panic!("{}", t!("ERROR_GET_NONCLIENTMETRICS_FAILED")));

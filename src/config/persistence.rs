@@ -9,14 +9,14 @@
 //!   the default config is written over the corrupt file, and returned.
 //! - If the file exists and parses successfully, it is returned as-is.
 
+use std::{fs, path::PathBuf};
+
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
-use winsafe::prelude::Handle;
+use winsafe::{HWND, co, prelude::Handle};
 
-use crate::config::AppLanguage;
+use super::AppLanguage;
 
 /// The outcome of attempting to read and parse the config file.
 ///
@@ -150,12 +150,8 @@ impl AppConfig {
 
     /// Display an error dialog using the null HWND (no parent window).
     fn show_error_dialog(message: &str) {
-        winsafe::HWND::NULL
-            .MessageBox(
-                message,
-                &t!("ERROR"),
-                winsafe::co::MB::OK | winsafe::co::MB::ICONERROR,
-            )
+        HWND::NULL
+            .MessageBox(message, &t!("ERROR"), co::MB::OK | co::MB::ICONERROR)
             .ok();
     }
 

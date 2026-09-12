@@ -5,8 +5,13 @@
 //! its descendant controls via Win32 `WM_SETFONT`.
 
 use rust_i18n::t;
+use windows::Win32::{
+    Foundation::{BOOL, FALSE, HWND as RawHwnd, LPARAM, TRUE, WPARAM},
+    UI::WindowsAndMessaging::{EnumChildWindows, SendMessageW, WM_SETFONT},
+};
 use winsafe::{
-    HFONT, LOGFONT, NONCLIENTMETRICS, SystemParametersInfo, co, guard::DeleteObjectGuard,
+    AnyResult, HFONT, HWND, LOGFONT, NONCLIENTMETRICS, SystemParametersInfo, co,
+    guard::DeleteObjectGuard,
 };
 
 /// The outcome of synchronizing the application font with system metrics.
@@ -53,10 +58,7 @@ impl FontManager {
     ///
     /// Returns `true` if the font changed and was applied, or `false` if the
     /// system font is identical to the currently active font.
-    pub fn sync_system_font(
-        &mut self,
-        main_window_hwnd: &winsafe::HWND,
-    ) -> winsafe::AnyResult<FontSyncResult> {
+    pub fn sync_system_font(&mut self, main_window_hwnd: &HWND) -> AnyResult<FontSyncResult> {
         let system_non_client_metrics = fetch_system_non_client_metrics();
         let target_logfont = system_non_client_metrics.lfMessageFont;
 
@@ -112,31 +114,37 @@ fn is_logfont_equal(current_logfont: &LOGFONT, target_logfont: &LOGFONT) -> bool
 }
 
 /// Apply the given font handle to the window and all descendant child windows.
-fn apply_font_to_window_tree(main_window_hwnd: &winsafe::HWND, font_guard: &HFONT) {
-    let raw_main_hwnd = windows::Win32::Foundation::HWND(main_window_hwnd.ptr());
+fn apply_font_to_window_tree(main_window_hwnd: &HWND, font_guard: &HFONT) {
+    let raw_main_hwnd = RawHwnd(main_window_hwnd.ptr());
 
     let _ = unsafe {
-        windows::Win32::UI::WindowsAndMessaging::EnumChildWindows(
+        EnumChildWindows(
             raw_main_hwnd,
             Some(apply_font_to_child_window_callback),
-            windows::Win32::Foundation::LPARAM(font_guard.ptr() as isize),
+            LPARAM(font_guard.ptr() as isize),
         )
     };
 }
 
 /// Callback for `EnumChildWindows` to dispatch `WM_SETFONT` to each child window.
 unsafe extern "system" fn apply_font_to_child_window_callback(
-    child_window_hwnd: windows::Win32::Foundation::HWND,
-    lparam: windows::Win32::Foundation::LPARAM,
-) -> windows::Win32::Foundation::BOOL {
-    let font_handle_wparam = windows::Win32::Foundation::WPARAM(lparam.0 as usize);
-    unsafe {
-        windows::Win32::UI::WindowsAndMessaging::SendMessageW(
-            child_window_hwnd,
-            windows::Win32::UI::WindowsAndMessaging::WM_SETFONT,
-            font_handle_wparam,
-            windows::Win32::Foundation::LPARAM(1),
-        );
+    child_window_hwnd: RawHwnd,
+    lparam: LPARAM,
+) -> BOOL {
+    let execution_result = std::panic::catch_unwind(|| {
+        let font_handle_wparam = WPARAM(lparam.0 as usize);
+        unsafe {
+            SendMessageW(
+                child_window_hwnd,
+                WM_SETFONT,
+                font_handle_wparam,
+                LPARAM(TRUE.0 as isize),
+            );
+        }
+    });
+
+    match execution_result {
+        Ok(_) => TRUE,
+        Err(_) => FALSE,
     }
-    windows::Win32::Foundation::TRUE
 }

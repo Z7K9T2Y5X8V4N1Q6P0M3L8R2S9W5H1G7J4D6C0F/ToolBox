@@ -7,7 +7,7 @@
 use std::ops::Deref;
 
 use rust_i18n::t;
-use winsafe::{BmpPtrStr, HMENU, IdMenu, MenuItem, co};
+use winsafe::{AnyResult, BmpPtrStr, HMENU, HWND, IdMenu, MenuItem, co};
 
 use super::state::{IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_RESTART_EXPLORER};
 
@@ -15,7 +15,7 @@ use super::state::{IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_RESTART_EXPLORER}
 ///
 /// Returns a new [`HMENU`] that can be attached to the main window
 /// via [`winsafe::HWND::SetMenu`].
-pub fn build_main_menu() -> winsafe::AnyResult<HMENU> {
+pub fn build_main_menu() -> AnyResult<HMENU> {
     let main_menu_bar = HMENU::CreateMenu()?;
 
     let options_popup_menu = create_options_popup_menu()?;
@@ -36,7 +36,7 @@ pub fn build_main_menu() -> winsafe::AnyResult<HMENU> {
 }
 
 /// Build the Options submenu.
-fn create_options_popup_menu() -> winsafe::AnyResult<HMENU> {
+fn create_options_popup_menu() -> AnyResult<HMENU> {
     let options_popup_menu = HMENU::CreatePopupMenu()?;
     options_popup_menu.append_item(&[MenuItem::Entry {
         cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
@@ -49,7 +49,7 @@ fn create_options_popup_menu() -> winsafe::AnyResult<HMENU> {
 ///
 /// The currently active locale is shown as checked and grayed so the user
 /// can see the selection but cannot re-select it.
-fn create_language_popup_menu() -> winsafe::AnyResult<HMENU> {
+fn create_language_popup_menu() -> AnyResult<HMENU> {
     let language_popup_menu = HMENU::CreatePopupMenu()?;
     let current_locale = rust_i18n::locale();
 
@@ -79,7 +79,7 @@ fn create_language_popup_menu() -> winsafe::AnyResult<HMENU> {
 ///
 /// Called after a language change so all menu labels reflect the new locale.
 /// The old [`HMENU`] is explicitly destroyed to avoid a resource leak.
-pub(super) fn rebuild_main_menu(main_window_hwnd: &winsafe::HWND) -> winsafe::AnyResult<()> {
+pub(super) fn rebuild_main_menu(main_window_hwnd: &HWND) -> AnyResult<()> {
     let old_hmenu = main_window_hwnd.GetMenu();
     main_window_hwnd.SetMenu(&build_main_menu()?)?;
     if let Some(mut old_hmenu) = old_hmenu {

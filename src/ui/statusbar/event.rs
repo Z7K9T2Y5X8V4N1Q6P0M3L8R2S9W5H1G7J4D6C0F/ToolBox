@@ -5,8 +5,7 @@
 //! was outside, then requesting a WM_MOUSELEAVE notification via
 //! [`TrackMouseEvent`] to know when to clear the status bar.
 
-use std::cell::Cell;
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use rust_i18n::t;
 use winsafe::{HWND, TRACKMOUSEEVENT, TrackMouseEvent, co, gui, prelude::*};

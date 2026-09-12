@@ -8,3 +8,5 @@
 
 pub mod hook;
 pub mod layout;
+
+pub use hook::install_ui_customization_hook;

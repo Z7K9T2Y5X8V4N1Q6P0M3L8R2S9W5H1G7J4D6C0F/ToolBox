@@ -4,7 +4,7 @@
 //! context menu for selected system processes.
 
 use rust_i18n::t;
-use winsafe::{HMENU, MenuItem, POINT, co};
+use winsafe::{AnyResult, HMENU, HWND, MenuItem, POINT, co};
 
 /// Command ID for applying basic visual style to the selected process window.
 pub const IDM_VISUAL_STYLES_APPLY_BASIC: u16 = 3101;
@@ -17,9 +17,9 @@ pub const IDM_VISUAL_STYLES_APPLY_CLASSIC: u16 = 3102;
 /// Builds a transient popup menu with options to apply visual styles, tracks
 /// user interaction, and destroys the menu handle when dismissed.
 pub(super) fn show_process_context_menu(
-    parent_window_hwnd: &winsafe::HWND,
+    parent_window_hwnd: &HWND,
     screen_position: POINT,
-) -> winsafe::AnyResult<()> {
+) -> AnyResult<()> {
     let mut popup_menu = HMENU::CreatePopupMenu()?;
 
     popup_menu.append_item(&[

@@ -10,4 +10,7 @@
 
 mod build;
 pub mod container;
-pub(crate) mod layout;
+pub mod layout;
+
+pub use container::TabContainer;
+pub use layout::{bring_control_to_top, paint_tab_page_background, reposition_and_resize_control};

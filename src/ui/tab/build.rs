@@ -4,9 +4,9 @@
 //! are refreshed on every locale change via [`get_tab_control_titles`].
 
 use rust_i18n::t;
-use winsafe::{gui, prelude::*};
+use winsafe::{gui, prelude::GuiParent};
 
-use crate::ui::pages::{settings::SettingsPage, window_visual_styles::WindowVisualStylesPage};
+use crate::ui::pages::{SettingsPage, WindowVisualStylesPage};
 
 /// Create the [`gui::Tab`] control with all pages attached.
 ///

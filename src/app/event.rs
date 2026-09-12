@@ -6,18 +6,22 @@
 
 use rust_i18n::t;
 use windows::Win32::UI::WindowsAndMessaging::WM_SETTINGCHANGE;
-use winsafe::gui;
 use winsafe::prelude::{GuiEventsParent, GuiEventsWindow, GuiWindow};
+use winsafe::{co, gui};
 
-use super::build::MainWindow;
-use crate::ui;
+use crate::ui::font::FontSyncResult;
+use crate::ui::menu;
+use crate::ui::tab::TabContainer;
+use crate::ui::window::layout::{self, apply_minimum_window_size};
+
+use super::MainWindow;
 
 /// Register all event handlers for the main window.
 ///
 /// Must be called once after [`MainWindow`] is constructed and before
 /// the message loop starts.
 pub fn register_all_events(main_window_instance: &MainWindow) -> winsafe::AnyResult<()> {
-    ui::menu::register_menu_events(main_window_instance);
+    menu::register_menu_events(main_window_instance);
     register_window_create_event(main_window_instance);
     register_window_min_max_info_event(main_window_instance);
     register_window_size_event(main_window_instance);
@@ -31,9 +35,9 @@ fn register_window_create_event(main_window_instance: &MainWindow) {
     let cloned_main_window_instance = main_window_instance.clone();
     main_window_instance.main_window.on().wm_create(move |_| {
         let main_window_hwnd = cloned_main_window_instance.main_window.hwnd();
-        let main_menu_bar = ui::menu::build_main_menu()?;
+        let main_menu_bar = menu::build_main_menu()?;
         main_window_hwnd.SetMenu(&main_menu_bar)?;
-        ui::window::layout::center_and_resize_window(main_window_hwnd)?;
+        layout::center_and_resize_window(main_window_hwnd)?;
 
         cloned_main_window_instance
             .font_manager
@@ -50,7 +54,7 @@ fn register_window_min_max_info_event(main_window_instance: &MainWindow) {
         .main_window
         .on()
         .wm_get_min_max_info(|min_max| {
-            ui::window::layout::apply_minimum_window_size(min_max.info);
+            apply_minimum_window_size(min_max.info);
             Ok(())
         });
 }
@@ -75,7 +79,7 @@ fn register_window_size_event(main_window_instance: &MainWindow) {
 
 /// Recalculate main window content dimensions and resize child containers.
 pub(crate) fn relayout_main_window_contents(
-    tab_container: &ui::tab::container::TabContainer,
+    tab_container: &TabContainer,
     status_bar: &gui::StatusBar,
     client_width: i32,
     client_height: i32,
@@ -95,7 +99,7 @@ pub(crate) fn relayout_main_window_contents(
 fn register_window_setting_change_event(main_window_instance: &MainWindow) {
     let cloned_main_window_instance = main_window_instance.clone();
     main_window_instance.main_window.on().wm(
-        unsafe { winsafe::co::WM::from_raw(WM_SETTINGCHANGE) },
+        unsafe { co::WM::from_raw(WM_SETTINGCHANGE) },
         move |_| {
             let main_window_hwnd = cloned_main_window_instance.main_window.hwnd();
 
@@ -104,7 +108,7 @@ fn register_window_setting_change_event(main_window_instance: &MainWindow) {
                 .borrow_mut()
                 .sync_system_font(main_window_hwnd)?;
 
-            if font_sync_result == crate::ui::font::FontSyncResult::Changed {
+            if font_sync_result == FontSyncResult::Changed {
                 cloned_main_window_instance
                     .tab_container
                     .handle_font_changed()?;
@@ -134,7 +138,7 @@ fn register_window_app_message_event(main_window_instance: &MainWindow) {
     main_window_instance
         .main_window
         .on()
-        .wm(winsafe::co::WM::APP, move |_| {
+        .wm(co::WM::APP, move |_| {
             if let Some(error_message) = cloned_main_window_instance
                 .pending_error_message
                 .borrow_mut()
@@ -143,7 +147,7 @@ fn register_window_app_message_event(main_window_instance: &MainWindow) {
                 cloned_main_window_instance.main_window.hwnd().MessageBox(
                     &error_message,
                     &t!("ERROR"),
-                    winsafe::co::MB::OK | winsafe::co::MB::ICONWARNING,
+                    co::MB::OK | co::MB::ICONWARNING,
                 )?;
             }
             Ok(0)

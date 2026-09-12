@@ -8,7 +8,9 @@
 //! - `WM_VSCROLL` on the scrollable panel — fired by the scrollbar track and arrows
 //! - `WM_MOUSEWHEEL` on the content panel — fired when the mouse wheel is used
 
-use winsafe::{HwndPlace, POINT, SCROLLINFO, SIZE, SystemParametersInfo, co, gui, msg, prelude::*};
+use winsafe::{
+    AnyResult, HwndPlace, POINT, SCROLLINFO, SIZE, SystemParametersInfo, co, gui, msg, prelude::*,
+};
 
 /// Register the `WM_VSCROLL` handler on the scrollable panel.
 ///
@@ -151,7 +153,7 @@ pub(super) fn apply_scroll_position(
     scrollable_panel: &gui::WindowControl,
     content_panel: &gui::WindowControl,
     new_scroll_position: i32,
-) -> winsafe::AnyResult<()> {
+) -> AnyResult<()> {
     let mut scroll_info = SCROLLINFO::default();
     scroll_info.fMask = co::SIF::POS;
     scroll_info.nPos = new_scroll_position;

@@ -6,7 +6,7 @@
 //! - [`apply_minimum_window_size`] — enforces a minimum track size so the
 //!   user cannot resize the window smaller than the UI requires
 
-use winsafe::gui;
+use winsafe::{AnyResult, GetSystemMetrics, HWND, HwndPlace, MINMAXINFO, POINT, SIZE, co, gui};
 
 /// The default window width at 96 DPI (100% scaling).
 const WINDOW_WIDTH: i32 = 310;
@@ -18,24 +18,24 @@ const WINDOW_HEIGHT: i32 = 585;
 ///
 /// Called once during `WM_CREATE` after the window handle is valid.
 /// Both dimensions are scaled to the actual display DPI before applying.
-pub fn center_and_resize_window(main_window_handle: &winsafe::HWND) -> winsafe::AnyResult<()> {
-    let calculated_window_size = winsafe::SIZE {
+pub fn center_and_resize_window(main_window_handle: &HWND) -> AnyResult<()> {
+    let calculated_window_size = SIZE {
         cx: gui::dpi_x(WINDOW_WIDTH),
         cy: gui::dpi_y(WINDOW_HEIGHT),
     };
 
-    let system_screen_width = winsafe::GetSystemMetrics(winsafe::co::SM::CXSCREEN);
-    let system_screen_height = winsafe::GetSystemMetrics(winsafe::co::SM::CYSCREEN);
-    let centered_window_position = winsafe::POINT {
+    let system_screen_width = GetSystemMetrics(co::SM::CXSCREEN);
+    let system_screen_height = GetSystemMetrics(co::SM::CYSCREEN);
+    let centered_window_position = POINT {
         x: (system_screen_width - calculated_window_size.cx) / 2,
         y: (system_screen_height - calculated_window_size.cy) / 2,
     };
 
     main_window_handle.SetWindowPos(
-        winsafe::HwndPlace::None,
+        HwndPlace::None,
         centered_window_position,
         calculated_window_size,
-        winsafe::co::SWP::NOZORDER,
+        co::SWP::NOZORDER,
     )?;
 
     Ok(())
@@ -45,8 +45,8 @@ pub fn center_and_resize_window(main_window_handle: &winsafe::HWND) -> winsafe::
 ///
 /// Prevents the user from resizing the window below the default dimensions,
 /// which would cause controls to overlap or be clipped.
-pub fn apply_minimum_window_size(min_max_info: &mut winsafe::MINMAXINFO) {
-    min_max_info.ptMinTrackSize = winsafe::POINT {
+pub fn apply_minimum_window_size(min_max_info: &mut MINMAXINFO) {
+    min_max_info.ptMinTrackSize = POINT {
         x: gui::dpi_x(WINDOW_WIDTH),
         y: gui::dpi_y(WINDOW_HEIGHT),
     };

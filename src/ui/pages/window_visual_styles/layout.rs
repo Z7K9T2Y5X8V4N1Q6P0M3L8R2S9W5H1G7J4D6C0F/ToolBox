@@ -5,8 +5,9 @@
 //! at runtime, so the layout looks correct at any scaling factor.
 
 use rust_i18n::t;
+
 use windows::Win32::{
-    Foundation::{LPARAM, WPARAM},
+    Foundation::{HWND as RawHwnd, LPARAM, WPARAM},
     UI::{
         Controls::{
             HDF_SORTDOWN, HDF_SORTUP, HDI_FORMAT, HDITEMW, HDM_GETITEMCOUNT, HDM_GETITEMW,
@@ -16,7 +17,8 @@ use windows::Win32::{
     },
 };
 use winsafe::{
-    HFONT, NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo, co, guard::DeleteObjectGuard, gui,
+    GetSystemMetrics, HFONT, HWND, NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo, co,
+    guard::DeleteObjectGuard, gui, msg,
 };
 
 use super::process::{ProcessSortConfig, SortDirection};
@@ -41,7 +43,7 @@ fn non_negative(value: i32) -> i32 {
 }
 
 /// Check whether the ListView currently has a native vertical scrollbar attached.
-fn is_vertical_scrollbar_visible(listview_hwnd: &winsafe::HWND) -> bool {
+fn is_vertical_scrollbar_visible(listview_hwnd: &HWND) -> bool {
     let window_style_bits = listview_hwnd.GetWindowLongPtr(co::GWLP::STYLE) as u32;
     let window_style_flags = unsafe { co::WS::from_raw(window_style_bits) };
     window_style_flags.has(co::WS::VSCROLL)
@@ -62,7 +64,7 @@ pub(super) struct ProcessListViewColumnWidths {
 /// Deducts the vertical scrollbar width (if not already excluded by Win32 client rect calculations)
 /// and a small safety margin to prevent rounding artifacts or grid line borders from causing
 /// a horizontal scrollbar.
-pub(super) fn calculate_listview_usable_column_width(listview_hwnd: &winsafe::HWND) -> i32 {
+pub(super) fn calculate_listview_usable_column_width(listview_hwnd: &HWND) -> i32 {
     let client_rect = match listview_hwnd.GetClientRect() {
         Ok(client_rect) => client_rect,
         Err(_) => return 0,
@@ -77,7 +79,7 @@ pub(super) fn calculate_listview_usable_column_width(listview_hwnd: &winsafe::HW
     // Because the process list will inevitably exceed visible rows, we must proactively
     // reserve space here to prevent columns from overflowing once the scrollbar appears.
     if !is_vertical_scrollbar_visible(listview_hwnd) {
-        let vertical_scrollbar_width = winsafe::GetSystemMetrics(co::SM::CXVSCROLL);
+        let vertical_scrollbar_width = GetSystemMetrics(co::SM::CXVSCROLL);
         available_width -= vertical_scrollbar_width;
     }
 
@@ -112,7 +114,7 @@ pub(super) fn calculate_process_listview_column_widths(
 /// `HDF_SORTUP` or `HDF_SORTDOWN` to the currently active sort column, while clearing
 /// any sort flags from non-active columns.
 pub(super) fn update_listview_header_sort_indicator(
-    listview_hwnd: &winsafe::HWND,
+    listview_hwnd: &HWND,
     sort_config: ProcessSortConfig,
 ) {
     let Some(listview_header_hwnd) = retrieve_listview_header_hwnd(listview_hwnd) else {
@@ -133,24 +135,22 @@ pub(super) fn update_listview_header_sort_indicator(
 }
 
 /// Retrieve the child Header control handle from the ListView control.
-fn retrieve_listview_header_hwnd(
-    listview_hwnd: &winsafe::HWND,
-) -> Option<windows::Win32::Foundation::HWND> {
-    let raw_listview_hwnd = windows::Win32::Foundation::HWND(listview_hwnd.ptr());
+fn retrieve_listview_header_hwnd(listview_hwnd: &HWND) -> Option<RawHwnd> {
+    let raw_listview_hwnd = RawHwnd(listview_hwnd.ptr());
     let listview_header_hwnd_result =
         unsafe { SendMessageW(raw_listview_hwnd, LVM_GETHEADER, WPARAM(0), LPARAM(0)) };
 
     if listview_header_hwnd_result.0 == 0 {
         None
     } else {
-        Some(windows::Win32::Foundation::HWND(
+        Some(RawHwnd(
             listview_header_hwnd_result.0 as *mut std::ffi::c_void,
         ))
     }
 }
 
 /// Query the total number of columns currently present in the Header control.
-fn fetch_header_column_count(listview_header_hwnd: windows::Win32::Foundation::HWND) -> usize {
+fn fetch_header_column_count(listview_header_hwnd: RawHwnd) -> usize {
     let column_count_result =
         unsafe { SendMessageW(listview_header_hwnd, HDM_GETITEMCOUNT, WPARAM(0), LPARAM(0)) };
     (column_count_result.0 as usize).max(0)
@@ -158,7 +158,7 @@ fn fetch_header_column_count(listview_header_hwnd: windows::Win32::Foundation::H
 
 /// Update or clear the sort direction arrow (▲ / ▼) on a single column header item.
 fn update_column_header_sort_indicator(
-    listview_header_hwnd: windows::Win32::Foundation::HWND,
+    listview_header_hwnd: RawHwnd,
     column_index: usize,
     target_sort_direction: Option<SortDirection>,
 ) {
@@ -257,8 +257,8 @@ impl WindowVisualStylesPageLayout {
 }
 
 /// Calculates the ideal vertical dimension for a single-line Edit control.
-pub(super) fn calculate_edit_ideal_height(edit_hwnd: &winsafe::HWND) -> i32 {
-    let explicit_font = unsafe { edit_hwnd.SendMessage(winsafe::msg::WmGetFont {}) };
+pub(super) fn calculate_edit_ideal_height(edit_hwnd: &HWND) -> i32 {
+    let explicit_font = unsafe { edit_hwnd.SendMessage(msg::WmGetFont {}) };
     let fallback_font_guard = explicit_font.is_none().then(create_fallback_font);
 
     // If an explicit font is present, borrow it directly; otherwise dereference the guard to &HFONT.
@@ -280,7 +280,7 @@ pub(super) fn calculate_edit_ideal_height(edit_hwnd: &winsafe::HWND) -> i32 {
         .unwrap_or_else(|_| panic!("{}", t!("ERROR_GET_TEXT_METRICS_FAILED")));
 
     let font_height = text_metric.tmHeight + text_metric.tmExternalLeading;
-    let edge_height = winsafe::GetSystemMetrics(co::SM::CYEDGE);
+    let edge_height = GetSystemMetrics(co::SM::CYEDGE);
 
     (font_height + (edge_height * 2)).max(gui::dpi_y(25))
 }

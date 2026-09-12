@@ -6,9 +6,9 @@
 use std::{cell::RefCell, rc::Rc};
 
 use rust_i18n::t;
-use winsafe::{WString, gui, msg, prelude::*};
+use winsafe::{AnyResult, WString, gui, msg, prelude::*};
 
-use super::process::ProcessManager;
+use super::{build, event, process::ProcessManager};
 
 /// The window visual styles tab page.
 ///
@@ -35,11 +35,11 @@ impl WindowVisualStylesPage {
     /// the parent window.
     pub fn new(parent_window: &(impl GuiParent + 'static), status_bar: gui::StatusBar) -> Self {
         let process_manager = Rc::new(RefCell::new(ProcessManager::new()));
-        let tab_page = super::build::create_tab_page(parent_window);
-        let edit = super::build::create_edit(&tab_page);
-        let listview = super::build::create_listview(&tab_page);
+        let tab_page = build::create_tab_page(parent_window);
+        let edit = build::create_edit(&tab_page);
+        let listview = build::create_listview(&tab_page);
 
-        super::event::setup_all_events(&tab_page, &edit, &listview, &process_manager, &status_bar);
+        event::setup_all_events(&tab_page, &edit, &listview, &process_manager, &status_bar);
 
         Self {
             tab_page,
@@ -53,7 +53,7 @@ impl WindowVisualStylesPage {
     ///
     /// Updates the Edit cue banner, the ListView column headers, and re-applies the
     /// active sort indicator arrow to the header.
-    pub fn update_texts(&self) -> winsafe::AnyResult<()> {
+    pub fn update_texts(&self) -> AnyResult<()> {
         // 1. Update Edit cue banner
         unsafe {
             self.edit
@@ -80,8 +80,8 @@ impl WindowVisualStylesPage {
     }
 
     /// Notify the page that the system UI font has changed.
-    pub fn handle_font_changed(&self) -> winsafe::AnyResult<()> {
-        super::event::apply_custom_row_height(&self.listview)?;
+    pub fn handle_font_changed(&self) -> AnyResult<()> {
+        event::apply_custom_row_height(&self.listview)?;
         Ok(())
     }
 }

@@ -7,7 +7,7 @@
 
 use rust_i18n::t;
 use std::panic;
-use winsafe::{co, prelude::Handle};
+use winsafe::{HWND, co, prelude::Handle};
 
 /// Install a panic hook that displays the panic message in a Win32 error dialog.
 ///
@@ -15,7 +15,7 @@ use winsafe::{co, prelude::Handle};
 /// that could panic. Replaces the default stderr-based panic handler.
 pub fn install_panic_hook() {
     panic::set_hook(Box::new(|panic_info| {
-        winsafe::HWND::NULL
+        HWND::NULL
             .MessageBox(
                 &t!(
                     "FATAL_ERROR_CONTENT",

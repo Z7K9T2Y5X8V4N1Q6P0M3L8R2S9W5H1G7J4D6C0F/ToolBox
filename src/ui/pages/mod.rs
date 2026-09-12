@@ -11,3 +11,6 @@
 
 pub mod settings;
 pub mod window_visual_styles;
+
+pub use settings::SettingsPage;
+pub use window_visual_styles::WindowVisualStylesPage;

@@ -127,6 +127,10 @@ CONFIG_SAVE_FAILED:
   en-US: "Failed to save configuration:\n%{save_error}"
   zh-CN: "保存配置失败:\n%{save_error}"
 
+ERROR_DESTROY_IMAGELIST_FAILED:
+  en-US: "Failed to destroy previous ImageList handle"
+  zh-CN: "销毁旧图像列表句柄失败"
+
 CHECKBOX_DISABLE_WINDOWS_UPDATE:
   en-US: "Disable Windows Update"
   zh-CN: "禁用 Windows Update"

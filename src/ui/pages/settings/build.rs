@@ -7,8 +7,7 @@
 use rust_i18n::t;
 use winsafe::{POINT, co, gui, prelude::*};
 
-use super::layout::CheckboxLayoutCalculator;
-use super::state::CheckboxId;
+use super::{CheckboxId, layout::CheckboxLayoutCalculator};
 
 /// Create the [`gui::TabPage`] that hosts all settings controls.
 pub(super) fn create_tab_page(parent_window: &(impl GuiParent + 'static)) -> gui::TabPage {

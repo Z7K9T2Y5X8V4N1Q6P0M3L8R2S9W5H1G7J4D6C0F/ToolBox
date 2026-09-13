@@ -6,10 +6,11 @@
 
 <div align="center">
   <kbd>
-    <img src="https://github.com/Z7K9T2Y5X8V4N1Q6P0M3L8R2S9W5H1G7J4D6C0F/ToolBox/blob/main/screenshot/1.png" />
-    <img src="https://github.com/Z7K9T2Y5X8V4N1Q6P0M3L8R2S9W5H1G7J4D6C0F/ToolBox/blob/main/screenshot/2.png" />
+    <img src="./screenshot/1.png" />
+    <img src="./screenshot/2.png" />
   </kbd>
 </div>
+
 
 
 ## Description

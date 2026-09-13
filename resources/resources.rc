@@ -1,0 +1,2 @@
+// ID 1 is the main icon. Windows Explorer uses the icon with ID 1 as the default executable icon.
+1 ICON "launcher.ico"

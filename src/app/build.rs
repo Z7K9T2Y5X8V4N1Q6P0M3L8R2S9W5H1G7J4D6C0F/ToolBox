@@ -38,6 +38,7 @@ impl MainWindow {
         let window_title = t!("TOOLBOX_TITLE");
         let main_window = gui::WindowMain::new(gui::WindowMainOpts {
             title: &window_title,
+            class_icon: gui::Icon::Id(1),
             style: co::WS::OVERLAPPEDWINDOW,
             ..Default::default()
         });

@@ -6,10 +6,11 @@
 
 <div align="center">
   <kbd>
-    <img src="./screenshot/1.png" />
-    <img src="./screenshot/2.png" />
+    <img src="./screenshot/1_zh_CN.png" />
+    <img src="./screenshot/2_zh_CN.png" />
   </kbd>
 </div>
+
 
 
 

@@ -8,7 +8,7 @@ use std::{cell::RefCell, rc::Rc};
 use rust_i18n::t;
 use winsafe::{AnyResult, WString, gui, msg, prelude::*};
 
-use super::{build, event, process::ProcessManager};
+use super::{build, event, layout, process::ProcessManager};
 
 /// The window visual styles tab page.
 ///
@@ -65,16 +65,9 @@ impl WindowVisualStylesPage {
                 .ok();
         }
 
-        // 2. Update ListView column headers
-        self.listview
-            .cols()
-            .get(0)
-            .set_title(&t!("LISTVIEW_COLUMN_PROCESS_NAME"))?;
-
-        self.listview
-            .cols()
-            .get(1)
-            .set_title(&t!("LISTVIEW_COLUMN_PID"))?;
+        // 2. Update ListView column headers with localized titles and active sort indicator
+        let current_sort_config = self.process_manager.borrow().current_sort_config();
+        layout::update_listview_header_sort_indicator(&self.listview, current_sort_config)?;
 
         Ok(())
     }

@@ -91,7 +91,7 @@ fn setup_context_menu_command_events(tab_page: &gui::TabPage, listview: &gui::Li
     tab_page
         .on()
         .wm_command_acc_menu(IDM_VISUAL_STYLES_APPLY_BASIC, move || {
-            if let Some(selected_process_id) =
+            if let Some(_selected_process_id) =
                 get_currently_selected_process_id(&cloned_listview_for_basic)
             {}
             Ok(())
@@ -101,7 +101,7 @@ fn setup_context_menu_command_events(tab_page: &gui::TabPage, listview: &gui::Li
     tab_page
         .on()
         .wm_command_acc_menu(IDM_VISUAL_STYLES_APPLY_CLASSIC, move || {
-            if let Some(selected_process_id) =
+            if let Some(_selected_process_id) =
                 get_currently_selected_process_id(&cloned_listview_for_classic)
             {}
             Ok(())
@@ -191,9 +191,9 @@ fn setup_page_initialization_event(
 
         // Step 4: Apply the initial sorting arrow on the header.
         layout::update_listview_header_sort_indicator(
-            cloned_listview.hwnd(),
+            &cloned_listview,
             borrowed_process_manager.current_sort_config(),
-        );
+        )?;
 
         // Step 5: Ensure column widths are synchronized after items are populated.
         apply_dynamic_column_widths(&cloned_listview)?;
@@ -318,10 +318,7 @@ fn setup_column_click_event(
             let updated_processes = borrowed_process_manager.fetch_sorted_processes();
 
             apply_process_list_to_view(&cloned_listview, &updated_processes)?;
-            layout::update_listview_header_sort_indicator(
-                cloned_listview.hwnd(),
-                current_sort_config,
-            );
+            layout::update_listview_header_sort_indicator(&cloned_listview, current_sort_config)?;
         }
 
         Ok(())

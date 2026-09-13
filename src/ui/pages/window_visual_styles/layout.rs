@@ -5,23 +5,12 @@
 //! at runtime, so the layout looks correct at any scaling factor.
 
 use rust_i18n::t;
-
-use windows::Win32::{
-    Foundation::{HWND as RawHwnd, LPARAM, WPARAM},
-    UI::{
-        Controls::{
-            HDF_SORTDOWN, HDF_SORTUP, HDI_FORMAT, HDITEMW, HDM_GETITEMCOUNT, HDM_GETITEMW,
-            HDM_SETITEMW, LVM_GETHEADER,
-        },
-        WindowsAndMessaging::SendMessageW,
-    },
-};
 use winsafe::{
-    GetSystemMetrics, HFONT, HWND, NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo, co,
-    guard::DeleteObjectGuard, gui, msg,
+    AnyResult, GetSystemMetrics, HFONT, HWND, NONCLIENTMETRICS, POINT, SIZE, SystemParametersInfo,
+    co, guard::DeleteObjectGuard, gui, msg,
 };
 
-use super::process::{ProcessSortConfig, SortDirection};
+use super::process::{ProcessSortConfig, SortColumn, SortDirection};
 
 // ---------------------------------------------------------------------------
 // Raw pixel constants at 96 DPI
@@ -110,93 +99,46 @@ pub(super) fn calculate_process_listview_column_widths(
 
 /// Update the visual sort arrow indicators (▲ / ▼) on the ListView column headers.
 ///
-/// Sends `HDM_SETITEMW` to the child Header control of the ListView to apply
-/// `HDF_SORTUP` or `HDF_SORTDOWN` to the currently active sort column, while clearing
-/// any sort flags from non-active columns.
+/// Directly formats the column header title text with a trailing Unicode arrow indicator,
+/// ensuring the arrow naturally inherits the active font metrics and remains immune to
+/// Win32 non-client theme and DPI bitmap caching issues.
 pub(super) fn update_listview_header_sort_indicator(
-    listview_hwnd: &HWND,
+    listview: &gui::ListView,
     sort_config: ProcessSortConfig,
-) {
-    let Some(listview_header_hwnd) = retrieve_listview_header_hwnd(listview_hwnd) else {
-        return;
-    };
+) -> AnyResult<()> {
+    let process_name_title = build_column_header_title(
+        &t!("LISTVIEW_COLUMN_PROCESS_NAME"),
+        sort_config.column == SortColumn::ProcessName,
+        sort_config.direction,
+    );
+    let process_id_title = build_column_header_title(
+        &t!("LISTVIEW_COLUMN_PID"),
+        sort_config.column == SortColumn::ProcessId,
+        sort_config.direction,
+    );
 
-    let total_column_count = fetch_header_column_count(listview_header_hwnd);
-    let active_column_index = sort_config.column.to_column_index();
-    for column_index in 0..total_column_count {
-        let target_sort_direction =
-            (column_index == active_column_index).then_some(sort_config.direction);
-        update_column_header_sort_indicator(
-            listview_header_hwnd,
-            column_index,
-            target_sort_direction,
-        );
-    }
+    listview.cols().get(0).set_title(&process_name_title)?;
+    listview.cols().get(1).set_title(&process_id_title)?;
+
+    Ok(())
 }
 
-/// Retrieve the child Header control handle from the ListView control.
-fn retrieve_listview_header_hwnd(listview_hwnd: &HWND) -> Option<RawHwnd> {
-    let raw_listview_hwnd = RawHwnd(listview_hwnd.ptr());
-    let listview_header_hwnd_result =
-        unsafe { SendMessageW(raw_listview_hwnd, LVM_GETHEADER, WPARAM(0), LPARAM(0)) };
-
-    if listview_header_hwnd_result.0 == 0 {
-        None
-    } else {
-        Some(RawHwnd(
-            listview_header_hwnd_result.0 as *mut std::ffi::c_void,
-        ))
-    }
-}
-
-/// Query the total number of columns currently present in the Header control.
-fn fetch_header_column_count(listview_header_hwnd: RawHwnd) -> usize {
-    let column_count_result =
-        unsafe { SendMessageW(listview_header_hwnd, HDM_GETITEMCOUNT, WPARAM(0), LPARAM(0)) };
-    (column_count_result.0 as usize).max(0)
-}
-
-/// Update or clear the sort direction arrow (▲ / ▼) on a single column header item.
-fn update_column_header_sort_indicator(
-    listview_header_hwnd: RawHwnd,
-    column_index: usize,
-    target_sort_direction: Option<SortDirection>,
-) {
-    let mut header_item = HDITEMW {
-        mask: HDI_FORMAT,
-        ..Default::default()
-    };
-
-    let fetch_format_result = unsafe {
-        SendMessageW(
-            listview_header_hwnd,
-            HDM_GETITEMW,
-            WPARAM(column_index),
-            LPARAM(std::ptr::from_mut(&mut header_item) as isize),
-        )
-    };
-    if fetch_format_result.0 == 0 {
-        return;
+/// Build a localized column header title string with an optional sort arrow.
+fn build_column_header_title(
+    base_title: &str,
+    is_active_sort_column: bool,
+    sort_direction: SortDirection,
+) -> String {
+    if !is_active_sort_column {
+        return base_title.to_string();
     }
 
-    // Strip both sort arrow flags before applying new state.
-    let stripped_format_flags = header_item.fmt.0 & !(HDF_SORTUP.0 | HDF_SORTDOWN.0);
-    let new_sort_flag = match target_sort_direction {
-        Some(SortDirection::Ascending) => HDF_SORTUP.0,
-        Some(SortDirection::Descending) => HDF_SORTDOWN.0,
-        None => 0,
+    let arrow_indicator = match sort_direction {
+        SortDirection::Ascending => "🔼",
+        SortDirection::Descending => "🔽",
     };
 
-    header_item.fmt.0 = stripped_format_flags | new_sort_flag;
-
-    unsafe {
-        SendMessageW(
-            listview_header_hwnd,
-            HDM_SETITEMW,
-            WPARAM(column_index),
-            LPARAM(std::ptr::from_ref(&header_item) as isize),
-        );
-    }
+    format!("{base_title} {arrow_indicator}")
 }
 
 // ---------------------------------------------------------------------------

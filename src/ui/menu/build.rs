@@ -9,7 +9,12 @@ use std::ops::Deref;
 use rust_i18n::t;
 use winsafe::{AnyResult, BmpPtrStr, HMENU, HWND, IdMenu, MenuItem, co};
 
-use super::state::{IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_RESTART_EXPLORER};
+use super::state::{
+    IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
+    IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT, IDM_OPTIONS_RESTART_EXPLORER,
+    IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
+    IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+};
 
 /// Build the complete main menu bar using the current locale.
 ///
@@ -38,10 +43,35 @@ pub fn build_main_menu() -> AnyResult<HMENU> {
 /// Build the Options submenu.
 fn create_options_popup_menu() -> AnyResult<HMENU> {
     let options_popup_menu = HMENU::CreatePopupMenu()?;
-    options_popup_menu.append_item(&[MenuItem::Entry {
-        cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
-        text: &t!("MENU_OPTIONS_RESTART_EXPLORER"),
-    }])?;
+    options_popup_menu.append_item(&[
+        MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
+            text: &t!("MENU_OPTIONS_RESTART_EXPLORER"),
+        },
+        MenuItem::Separator,
+        MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
+            text: &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
+        },
+        MenuItem::Separator,
+        MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
+            text: &t!("MENU_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES"),
+        },
+        MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
+            text: &t!("MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES"),
+        },
+        MenuItem::Separator,
+        MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
+            text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES"),
+        },
+        MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+            text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES"),
+        },
+    ])?;
     Ok(options_popup_menu)
 }
 

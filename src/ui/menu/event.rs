@@ -14,7 +14,12 @@ use crate::{
     config::{AppConfig, AppLanguage},
 };
 
-use super::state::{IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_RESTART_EXPLORER};
+use super::state::{
+    IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
+    IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT, IDM_OPTIONS_RESTART_EXPLORER,
+    IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
+    IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+};
 
 /// Register WM_COMMAND handlers for all menu items.
 ///
@@ -25,6 +30,31 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         .main_window
         .on()
         .wm_command_acc_menu(IDM_OPTIONS_RESTART_EXPLORER, move || Ok(()));
+
+    main_window_instance
+        .main_window
+        .on()
+        .wm_command_acc_menu(IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT, move || Ok(()));
+
+    main_window_instance.main_window.on().wm_command_acc_menu(
+        IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
+        move || Ok(()),
+    );
+
+    main_window_instance
+        .main_window
+        .on()
+        .wm_command_acc_menu(IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, move || Ok(()));
+
+    main_window_instance
+        .main_window
+        .on()
+        .wm_command_acc_menu(IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, move || Ok(()));
+
+    main_window_instance
+        .main_window
+        .on()
+        .wm_command_acc_menu(IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES, move || Ok(()));
 
     for (menu_command_id, locale_string, target_language) in [
         (IDM_LANG_EN_US, "en-US", AppLanguage::EnUs),

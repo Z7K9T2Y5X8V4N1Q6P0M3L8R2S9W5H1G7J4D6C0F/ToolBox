@@ -19,6 +19,26 @@ MENU_OPTIONS_RESTART_EXPLORER:
   en-US: "Restart File Explorer"
   zh-CN: "重启文件资源管理器"
 
+MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT:
+  en-US: "Repair Visual Styles to Default"
+  zh-CN: "修复视觉样式至默认"
+
+MENU_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES:
+  en-US: "Restore Default Classic Visual Styles"
+  zh-CN: "恢复默认经典视觉样式"
+
+MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES:
+  en-US: "Add Extra Classic Visual Styles"
+  zh-CN: "添加额外经典视觉样式"
+
+MENU_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES:
+  en-US: "Toggle Global Basic Styles"
+  zh-CN: "全局基本样式切换"
+
+MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES:
+  en-US: "Toggle Global Classic Styles"
+  zh-CN: "全局经典样式切换"
+
 TAB_SETTINGS:
   en-US: "Settings"
   zh-CN: "设置"

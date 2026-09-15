@@ -2,7 +2,8 @@
 //!
 //! Queries [`winsafe::NONCLIENTMETRICS`] via `SystemParametersInfo(SPI_GETNONCLIENTMETRICS)`
 //! and applies the configured message font (`lfMessageFont`) to the window and all of
-//! its descendant controls via Win32 `WM_SETFONT`.
+//! its descendant controls via Win32 `WM_SETFONT`. Also manages auxiliary system
+//! symbol fonts such as `Marlett`.
 
 use rust_i18n::t;
 use windows::Win32::{
@@ -30,6 +31,8 @@ pub struct FontManager {
     /// When replaced, the previous font guard is automatically dropped and
     /// deleted via Win32 `DeleteObject`.
     current_font_guard: Option<DeleteObjectGuard<HFONT>>,
+    /// Holds the auxiliary Marlett symbol font matched to the current font metrics height.
+    current_marlett_font_guard: Option<DeleteObjectGuard<HFONT>>,
     /// Cached system logical font used to detect configuration changes.
     current_logfont: Option<LOGFONT>,
 }
@@ -45,8 +48,16 @@ impl FontManager {
     pub fn new() -> Self {
         Self {
             current_font_guard: None,
+            current_marlett_font_guard: None,
             current_logfont: None,
         }
+    }
+
+    /// Return a borrowed reference to the currently active Marlett symbol font, if initialized.
+    pub fn current_marlett_font(&self) -> Option<&HFONT> {
+        self.current_marlett_font_guard
+            .as_ref()
+            .map(|marlett_font_guard| &**marlett_font_guard)
     }
 
     /// Synchronize the font with the current Windows system settings.
@@ -56,8 +67,8 @@ impl FontManager {
     /// applies it to the given window and all child controls, and safely drops
     /// the previous font.
     ///
-    /// Returns `true` if the font changed and was applied, or `false` if the
-    /// system font is identical to the currently active font.
+    /// Returns `FontSyncResult::Changed` if the font changed and was applied,
+    /// or `FontSyncResult::Unchanged` if the system font is identical to the currently active font.
     pub fn sync_system_font(&mut self, main_window_hwnd: &HWND) -> AnyResult<FontSyncResult> {
         let system_non_client_metrics = fetch_system_non_client_metrics();
         let target_logfont = system_non_client_metrics.lfMessageFont;
@@ -69,14 +80,28 @@ impl FontManager {
         }
 
         let new_font_guard = HFONT::CreateFontIndirect(&target_logfont)?;
+        let new_marlett_font_guard = create_matched_marlett_font(&target_logfont)?;
 
         apply_font_to_window_tree(main_window_hwnd, &new_font_guard);
 
         self.current_font_guard = Some(new_font_guard);
+        self.current_marlett_font_guard = Some(new_marlett_font_guard);
         self.current_logfont = Some(target_logfont);
 
         Ok(FontSyncResult::Changed)
     }
+}
+
+/// Create a `Marlett` font matching the vertical height of the current system message font.
+fn create_matched_marlett_font(reference_logfont: &LOGFONT) -> AnyResult<DeleteObjectGuard<HFONT>> {
+    let mut marlett_logfont = LOGFONT::default();
+    marlett_logfont.lfHeight = reference_logfont.lfHeight;
+    marlett_logfont.lfWeight = co::FW::NORMAL;
+    marlett_logfont.lfCharSet = co::CHARSET::DEFAULT;
+    marlett_logfont.set_lfFaceName("Marlett");
+
+    let marlett_font_guard = HFONT::CreateFontIndirect(&marlett_logfont)?;
+    Ok(marlett_font_guard)
 }
 
 /// Fetch system non-client metrics from Windows.

@@ -111,6 +111,14 @@ ERROR_GET_TEXT_METRICS_FAILED:
   en-US: "Failed to get text metrics from device context"
   zh-CN: "无法从设备上下文获取文本度量信息"
 
+ATTACH_HEADER_SUBCLASS_SET_PROP_FAILED:
+  en-US: "Failed to attach header subclass property to window handle"
+  zh-CN: "附加表头子类化属性到窗口句柄失败"
+
+ERROR_RENDER_SORT_INDICATOR_FAILED:
+  en-US: "Failed to render Marlett sort indicator on column %{column_index}: %{error}"
+  zh-CN: "在第 %{column_index} 列绘制 Marlett 排序指示符失败：%{error}"
+
 CONFIG_SAVE_DEFAULT_FAILED:
   en-US: "Failed to save default config:\n%{save_error}"
   zh-CN: "默认配置保存失败:\n%{save_error}"

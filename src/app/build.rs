@@ -44,8 +44,9 @@ impl MainWindow {
         });
 
         let status_bar = statusbar::create_status_bar(&main_window);
-        let tab_container = TabContainer::new(&main_window, status_bar.clone());
         let font_manager = Rc::new(RefCell::new(FontManager::new()));
+        let tab_container =
+            TabContainer::new(&main_window, status_bar.clone(), font_manager.clone());
 
         let main_window_instance = Self {
             main_window,

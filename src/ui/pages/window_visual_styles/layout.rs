@@ -10,8 +10,6 @@ use winsafe::{
     co, guard::DeleteObjectGuard, gui, msg,
 };
 
-use super::process::{ProcessSortConfig, SortColumn, SortDirection};
-
 // ---------------------------------------------------------------------------
 // Raw pixel constants at 96 DPI
 // ---------------------------------------------------------------------------
@@ -94,51 +92,23 @@ pub(super) fn calculate_process_listview_column_widths(
 }
 
 // ---------------------------------------------------------------------------
-// Header Sort Arrow Indicator
+// Header Column Title Refresh
 // ---------------------------------------------------------------------------
 
-/// Update the visual sort arrow indicators (▲ / ▼) on the ListView column headers.
+/// Refresh the localized column titles on the ListView header.
 ///
-/// Directly formats the column header title text with a trailing Unicode arrow indicator,
-/// ensuring the arrow naturally inherits the active font metrics and remains immune to
-/// Win32 non-client theme and DPI bitmap caching issues.
-pub(super) fn update_listview_header_sort_indicator(
-    listview: &gui::ListView,
-    sort_config: ProcessSortConfig,
-) -> AnyResult<()> {
-    let process_name_title = build_column_header_title(
-        &t!("LISTVIEW_COLUMN_PROCESS_NAME"),
-        sort_config.column == SortColumn::ProcessName,
-        sort_config.direction,
-    );
-    let process_id_title = build_column_header_title(
-        &t!("LISTVIEW_COLUMN_PID"),
-        sort_config.column == SortColumn::ProcessId,
-        sort_config.direction,
-    );
-
-    listview.cols().get(0).set_title(&process_name_title)?;
-    listview.cols().get(1).set_title(&process_id_title)?;
-
+/// Kept clean and free of Unicode arrows because sorting indicators are
+/// custom-drawn via the Marlett font in custom-draw notification events.
+pub(super) fn refresh_listview_header_titles(listview: &gui::ListView) -> AnyResult<()> {
+    listview
+        .cols()
+        .get(0)
+        .set_title(&t!("LISTVIEW_COLUMN_PROCESS_NAME"))?;
+    listview
+        .cols()
+        .get(1)
+        .set_title(&t!("LISTVIEW_COLUMN_PID"))?;
     Ok(())
-}
-
-/// Build a localized column header title string with an optional sort arrow.
-fn build_column_header_title(
-    base_title: &str,
-    is_active_sort_column: bool,
-    sort_direction: SortDirection,
-) -> String {
-    if !is_active_sort_column {
-        return base_title.to_string();
-    }
-
-    let arrow_indicator = match sort_direction {
-        SortDirection::Ascending => "🔼",
-        SortDirection::Descending => "🔽",
-    };
-
-    format!("{base_title} {arrow_indicator}")
 }
 
 // ---------------------------------------------------------------------------

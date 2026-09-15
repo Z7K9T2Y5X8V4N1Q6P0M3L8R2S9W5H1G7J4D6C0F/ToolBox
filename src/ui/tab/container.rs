@@ -5,15 +5,16 @@
 //! WM_SIZE and [`TabContainer::update_tab_control_titles`] /
 //! [`TabContainer::update_page_contents`] on every locale change.
 
-use winsafe::AnyResult;
-use winsafe::gui;
-use winsafe::prelude::GuiParent;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::ui::pages::SettingsPage;
-use crate::ui::pages::WindowVisualStylesPage;
+use winsafe::{AnyResult, gui, prelude::GuiParent};
 
-use super::build;
-use super::layout;
+use crate::ui::{
+    font::FontManager,
+    pages::{SettingsPage, WindowVisualStylesPage},
+};
+
+use super::{build, layout};
 
 /// Owns the tab control widget and all tab page instances.
 ///
@@ -29,9 +30,14 @@ pub struct TabContainer {
 
 impl TabContainer {
     /// Construct the tab control and all pages, wiring up their events.
-    pub fn new(parent_window: &(impl GuiParent + 'static), status_bar: gui::StatusBar) -> Self {
+    pub fn new(
+        parent_window: &(impl GuiParent + 'static),
+        status_bar: gui::StatusBar,
+        font_manager: Rc<RefCell<FontManager>>,
+    ) -> Self {
         let settings_page = SettingsPage::new(parent_window, status_bar.clone());
-        let window_visual_styles_page = WindowVisualStylesPage::new(parent_window, status_bar);
+        let window_visual_styles_page =
+            WindowVisualStylesPage::new(parent_window, status_bar, font_manager);
 
         let tab_pages = vec![
             settings_page.clone().into(),

@@ -8,6 +8,8 @@ use std::{cell::RefCell, rc::Rc};
 use rust_i18n::t;
 use winsafe::{AnyResult, WString, gui, msg, prelude::*};
 
+use crate::ui::font::FontManager;
+
 use super::{build, event, layout, process::ProcessManager};
 
 /// The window visual styles tab page.
@@ -33,13 +35,24 @@ impl WindowVisualStylesPage {
     ///
     /// Must be called before the message loop starts, on the same thread as
     /// the parent window.
-    pub fn new(parent_window: &(impl GuiParent + 'static), status_bar: gui::StatusBar) -> Self {
+    pub fn new(
+        parent_window: &(impl GuiParent + 'static),
+        status_bar: gui::StatusBar,
+        font_manager: Rc<RefCell<FontManager>>,
+    ) -> Self {
         let process_manager = Rc::new(RefCell::new(ProcessManager::new()));
         let tab_page = build::create_tab_page(parent_window);
         let edit = build::create_edit(&tab_page);
         let listview = build::create_listview(&tab_page);
 
-        event::setup_all_events(&tab_page, &edit, &listview, &process_manager, &status_bar);
+        event::setup_all_events(
+            &tab_page,
+            &edit,
+            &listview,
+            &process_manager,
+            &font_manager,
+            &status_bar,
+        );
 
         Self {
             tab_page,
@@ -51,8 +64,7 @@ impl WindowVisualStylesPage {
 
     /// Re-translate all visible text labels to the current locale.
     ///
-    /// Updates the Edit cue banner, the ListView column headers, and re-applies the
-    /// active sort indicator arrow to the header.
+    /// Updates the Edit cue banner and the clean ListView column headers.
     pub fn update_texts(&self) -> AnyResult<()> {
         // 1. Update Edit cue banner
         unsafe {
@@ -65,9 +77,8 @@ impl WindowVisualStylesPage {
                 .ok();
         }
 
-        // 2. Update ListView column headers with localized titles and active sort indicator
-        let current_sort_config = self.process_manager.borrow().current_sort_config();
-        layout::update_listview_header_sort_indicator(&self.listview, current_sort_config)?;
+        // 2. Update clean ListView column headers with localized titles
+        layout::refresh_listview_header_titles(&self.listview)?;
 
         Ok(())
     }

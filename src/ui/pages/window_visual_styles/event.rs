@@ -9,18 +9,31 @@ use std::{
 };
 
 use rust_i18n::t;
-use windows::Win32::UI::Controls::{HIMAGELIST as RawHimagelist, ImageList_Destroy};
+use windows::{
+    Win32::{
+        Foundation::{COLORREF, HANDLE, HWND as RawHwnd, LPARAM, LRESULT, WPARAM},
+        Graphics::Gdi::{HDC, SetBkMode, SetTextColor, TRANSPARENT},
+        UI::{
+            Controls::{HIMAGELIST as RawHimagelist, ImageList_Destroy, LVM_GETHEADER},
+            WindowsAndMessaging::{
+                CallWindowProcW, GWLP_WNDPROC, GetPropW, GetWindowLongPtrW, SetPropW,
+                SetWindowLongPtrW, WM_NCDESTROY, WM_PAINT, WNDPROC,
+            },
+        },
+    },
+    core::{PCWSTR, w},
+};
 use winsafe::{
-    AnyResult, GetCursorPos, HIMAGELIST, HWND, LVHITTESTINFO, POINT, SIZE, TRACKMOUSEEVENT,
-    TrackMouseEvent, WString, co, gui, msg, prelude::*,
+    AnyResult, GetCursorPos, GetSysColor, HIMAGELIST, HWND, LVHITTESTINFO, POINT, RECT, SIZE,
+    TRACKMOUSEEVENT, TrackMouseEvent, WString, co, gui, msg, prelude::*,
 };
 
-use crate::ui::tab;
+use crate::ui::{font::FontManager, tab};
 
 use super::{
     layout::{self, WindowVisualStylesPageLayout},
     menu::{self, IDM_VISUAL_STYLES_APPLY_BASIC, IDM_VISUAL_STYLES_APPLY_CLASSIC},
-    process::{ProcessItem, ProcessManager, SortColumn},
+    process::{ProcessItem, ProcessManager, SortColumn, SortDirection},
 };
 
 /// Unique Win32 timer ID for refreshing the process list.
@@ -32,6 +45,16 @@ const PROCESS_REFRESH_INTERVAL_MS: u32 = 1000;
 /// Target row height for each item in the ListView at 96 DPI.
 const LISTVIEW_ROW_HEIGHT_RAW: i32 = 30;
 
+/// Window property key used to store the subclass context on the Header window.
+const HEADER_SUBCLASS_PROP_KEY: PCWSTR = w!("ToolboxHeaderSubclassContext");
+
+/// Holds shared context for the Header control's subclass procedure.
+struct HeaderSubclassContext {
+    original_window_procedure: WNDPROC,
+    process_manager: Rc<RefCell<ProcessManager>>,
+    font_manager: Rc<RefCell<FontManager>>,
+}
+
 /// Wire up all event handlers for the window visual styles page.
 ///
 /// Must be called once during [`WindowVisualStylesPage::new`], after all controls
@@ -41,17 +64,194 @@ pub(super) fn setup_all_events(
     edit: &gui::Edit,
     listview: &gui::ListView,
     process_manager: &Rc<RefCell<ProcessManager>>,
+    font_manager: &Rc<RefCell<FontManager>>,
     status_bar: &gui::StatusBar,
 ) {
     tab::paint_tab_page_background(tab_page);
     setup_resize_event(tab_page, edit, listview);
-    setup_page_initialization_event(tab_page, edit, listview, process_manager);
+    setup_page_initialization_event(tab_page, edit, listview, process_manager, font_manager);
     setup_edit_filter_event(edit, listview, process_manager);
     setup_column_click_event(listview, process_manager);
     setup_timer_refresh_event(tab_page, listview, process_manager);
     setup_listview_hover_event(listview, status_bar);
     setup_context_menu_event(tab_page, listview);
     setup_context_menu_command_events(tab_page, listview);
+}
+
+// ---------------------------------------------------------------------------
+// Header Subclassing & Marlett Sort Indicator Painting
+// ---------------------------------------------------------------------------
+
+/// Attach a Win32 window procedure subclass to the ListView's internal Header control.
+fn attach_header_subclass(
+    listview: &gui::ListView,
+    process_manager: &Rc<RefCell<ProcessManager>>,
+    font_manager: &Rc<RefCell<FontManager>>,
+) {
+    let Some(raw_header_hwnd) = get_listview_header_hwnd(listview) else {
+        return;
+    };
+
+    let original_window_procedure_ptr = unsafe { GetWindowLongPtrW(raw_header_hwnd, GWLP_WNDPROC) };
+    if original_window_procedure_ptr == 0 {
+        return;
+    }
+
+    let original_window_procedure: WNDPROC =
+        unsafe { std::mem::transmute(original_window_procedure_ptr) };
+
+    let header_subclass_context = Box::new(HeaderSubclassContext {
+        original_window_procedure,
+        process_manager: process_manager.clone(),
+        font_manager: font_manager.clone(),
+    });
+
+    let header_subclass_context_raw_ptr = Box::into_raw(header_subclass_context);
+
+    let set_prop_result = unsafe {
+        SetPropW(
+            raw_header_hwnd,
+            HEADER_SUBCLASS_PROP_KEY,
+            HANDLE(header_subclass_context_raw_ptr as isize as *mut _),
+        )
+    };
+    if set_prop_result.is_err() {
+        let _ = unsafe { Box::from_raw(header_subclass_context_raw_ptr) };
+        panic!("{}", t!("ATTACH_HEADER_SUBCLASS_SET_PROP_FAILED"));
+    }
+
+    unsafe {
+        SetWindowLongPtrW(
+            raw_header_hwnd,
+            GWLP_WNDPROC,
+            header_subclass_procedure
+                as unsafe extern "system" fn(RawHwnd, u32, WPARAM, LPARAM) -> LRESULT
+                as isize,
+        );
+    }
+}
+
+/// The subclass procedure for the Header control.
+///
+/// Calls the original window procedure first so native headers, themes, and borders
+/// are fully drawn, then paints the Marlett sort arrow on top of the active column.
+unsafe extern "system" fn header_subclass_procedure(
+    hwnd: RawHwnd,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    let header_subclass_context_handle = unsafe { GetPropW(hwnd, HEADER_SUBCLASS_PROP_KEY) };
+    if header_subclass_context_handle.is_invalid() {
+        return LRESULT(0);
+    }
+
+    let header_subclass_context =
+        unsafe { &*(header_subclass_context_handle.0 as *const HeaderSubclassContext) };
+    let original_window_procedure = header_subclass_context.original_window_procedure;
+
+    // Let the default Header procedure draw everything first.
+    let original_window_procedure_result =
+        unsafe { CallWindowProcW(original_window_procedure, hwnd, msg, wparam, lparam) };
+
+    if msg == WM_PAINT {
+        paint_marlett_arrow_on_header(hwnd, header_subclass_context);
+    } else if msg == WM_NCDESTROY {
+        // Clean up heap context when the header window is destroyed.
+        let _ = unsafe {
+            Box::from_raw(header_subclass_context_handle.0 as *mut HeaderSubclassContext)
+        };
+    }
+
+    original_window_procedure_result
+}
+
+/// Paint the Marlett sort arrow on the active sorted header item.
+fn paint_marlett_arrow_on_header(
+    header_raw_hwnd: RawHwnd,
+    header_subclass_context: &HeaderSubclassContext,
+) {
+    let header_hwnd = unsafe { HWND::from_ptr(header_raw_hwnd.0) };
+    let Ok(device_context) = header_hwnd.GetDC() else {
+        return;
+    };
+
+    let sort_config = header_subclass_context
+        .process_manager
+        .borrow()
+        .current_sort_config();
+    let target_column_index = sort_config.column.to_column_index();
+
+    let mut column_header_rect = RECT::default();
+    let fetch_column_header_rect_result = unsafe {
+        header_hwnd.SendMessage(msg::HdmGetItemRect {
+            index: target_column_index as u32,
+            rect: &mut column_header_rect,
+        })
+    };
+    if fetch_column_header_rect_result.is_err() {
+        return;
+    }
+
+    let font_manager_borrowed = header_subclass_context.font_manager.borrow();
+    let Some(marlett_font) = font_manager_borrowed.current_marlett_font() else {
+        return;
+    };
+
+    let indicator_character = match sort_config.direction {
+        SortDirection::Ascending => "t",
+        SortDirection::Descending => "u",
+    };
+
+    let _font_guard = device_context.SelectObject(marlett_font);
+
+    unsafe {
+        SetBkMode(HDC(device_context.ptr()), TRANSPARENT);
+        SetTextColor(
+            HDC(device_context.ptr()),
+            COLORREF(GetSysColor(co::COLOR::GRAYTEXT).into()),
+        );
+    }
+
+    let right_margin = gui::dpi_x(8);
+    let mut marlett_font_arrow_rect = RECT {
+        left: column_header_rect.left,
+        top: column_header_rect.top,
+        right: column_header_rect.right - right_margin,
+        bottom: column_header_rect.bottom,
+    };
+
+    if let Err(draw_text_error) = device_context.DrawText(
+        indicator_character,
+        &mut marlett_font_arrow_rect,
+        co::DT::RIGHT | co::DT::VCENTER | co::DT::SINGLELINE,
+    ) {
+        log::error!(
+            "{}",
+            t!(
+                "ERROR_RENDER_SORT_INDICATOR_FAILED",
+                column_index = target_column_index,
+                error = draw_text_error
+            )
+        );
+    }
+}
+
+/// Retrieve the raw Win32 header control handle belonging to the ListView.
+fn get_listview_header_hwnd(listview: &gui::ListView) -> Option<RawHwnd> {
+    let header_raw_ptr = unsafe {
+        listview.hwnd().SendMessage(msg::Wm {
+            msg_id: co::WM::from_raw(LVM_GETHEADER),
+            wparam: 0,
+            lparam: 0,
+        })
+    };
+
+    if header_raw_ptr == 0 {
+        None
+    } else {
+        Some(RawHwnd(header_raw_ptr as *mut _))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -155,19 +355,21 @@ fn select_single_listview_item(listview: &gui::ListView, item_index: u32) -> Any
 /// 1. Configure the ListView item height by binding a custom-dimension dummy ImageList.
 /// 2. Set the edit control's cue banner (placeholder).
 /// 3. Fetch the initial snapshot of system processes and populate the ListView.
-/// 4. Display the initial sorting arrow on the header.
-/// 5. Ensure column widths are synchronized with visible vertical scrollbar.
+/// 4. Synchronize column titles and dynamic column widths.
+/// 5. Attach the subclass to the Header control for Marlett arrow rendering.
 /// 6. Start the periodic 1-second Win32 timer for ongoing background refreshes.
 fn setup_page_initialization_event(
     tab_page: &gui::TabPage,
     edit: &gui::Edit,
     listview: &gui::ListView,
     process_manager: &Rc<RefCell<ProcessManager>>,
+    font_manager: &Rc<RefCell<FontManager>>,
 ) {
     let cloned_edit = edit.clone();
     let cloned_listview = listview.clone();
     let cloned_tab_page = tab_page.clone();
     let cloned_process_manager = process_manager.clone();
+    let cloned_font_manager = font_manager.clone();
 
     tab_page.on().wm_create(move |_| {
         // Step 1: Expand row height using a DPI-scaled dummy ImageList.
@@ -189,14 +391,16 @@ fn setup_page_initialization_event(
         let initial_processes = borrowed_process_manager.fetch_sorted_processes();
         apply_process_list_to_view(&cloned_listview, &initial_processes)?;
 
-        // Step 4: Apply the initial sorting arrow on the header.
-        layout::update_listview_header_sort_indicator(
-            &cloned_listview,
-            borrowed_process_manager.current_sort_config(),
-        )?;
-
-        // Step 5: Ensure column widths are synchronized after items are populated.
+        // Step 4: Ensure column widths are synchronized after items are populated.
+        layout::refresh_listview_header_titles(&cloned_listview)?;
         apply_dynamic_column_widths(&cloned_listview)?;
+
+        // Step 5: Attach subclass to header for Marlett arrow rendering.
+        attach_header_subclass(
+            &cloned_listview,
+            &cloned_process_manager,
+            &cloned_font_manager,
+        );
 
         // Step 6: Start auto-refresh timer.
         cloned_tab_page.hwnd().SetTimer(
@@ -299,7 +503,7 @@ fn setup_edit_filter_event(
 /// 1. The sort configuration is toggled (switches column or inverts sort direction).
 /// 2. The processes are re-sorted according to the new configuration.
 /// 3. The ListView rows are immediately updated to reflect the new order.
-/// 4. The header indicator arrow is updated to reflect the active sort column and direction.
+/// 4. The header control is invalidated to trigger a repaint of the Marlett arrow.
 fn setup_column_click_event(
     listview: &gui::ListView,
     process_manager: &Rc<RefCell<ProcessManager>>,
@@ -314,11 +518,8 @@ fn setup_column_click_event(
             let mut borrowed_process_manager = cloned_process_manager.borrow_mut();
             borrowed_process_manager.toggle_sort_by_column(sort_column);
 
-            let current_sort_config = borrowed_process_manager.current_sort_config();
             let updated_processes = borrowed_process_manager.fetch_sorted_processes();
-
             apply_process_list_to_view(&cloned_listview, &updated_processes)?;
-            layout::update_listview_header_sort_indicator(&cloned_listview, current_sort_config)?;
         }
 
         Ok(())

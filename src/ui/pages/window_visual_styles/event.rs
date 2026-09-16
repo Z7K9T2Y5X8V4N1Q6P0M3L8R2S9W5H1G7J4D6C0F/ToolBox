@@ -12,7 +12,7 @@ use rust_i18n::t;
 use windows::{
     Win32::{
         Foundation::{COLORREF, HANDLE, HWND as RawHwnd, LPARAM, LRESULT, WPARAM},
-        Graphics::Gdi::{HDC, SetBkMode, SetTextColor, TRANSPARENT},
+        Graphics::Gdi::{HDC, InvalidateRect, SetBkMode, SetTextColor, TRANSPARENT},
         UI::{
             Controls::{HIMAGELIST as RawHimagelist, ImageList_Destroy, LVM_GETHEADER},
             WindowsAndMessaging::{
@@ -251,6 +251,17 @@ fn get_listview_header_hwnd(listview: &gui::ListView) -> Option<RawHwnd> {
         None
     } else {
         Some(RawHwnd(header_raw_ptr as *mut _))
+    }
+}
+
+/// Invalidate the entire ListView header control to force a complete repaint.
+///
+/// This ensures previous sort arrows are properly cleared when switching columns.
+fn invalidate_listview_header(listview: &gui::ListView) {
+    if let Some(raw_header_hwnd) = get_listview_header_hwnd(listview) {
+        unsafe {
+            let _ = InvalidateRect(raw_header_hwnd, None, true);
+        }
     }
 }
 
@@ -520,6 +531,10 @@ fn setup_column_click_event(
 
             let updated_processes = borrowed_process_manager.fetch_sorted_processes();
             apply_process_list_to_view(&cloned_listview, &updated_processes)?;
+
+            // Invalidate the header to erase any previously painted sort arrow
+            // and paint the arrow on the newly active column.
+            invalidate_listview_header(&cloned_listview);
         }
 
         Ok(())

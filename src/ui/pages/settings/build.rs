@@ -1,7 +1,7 @@
 //! Settings page control construction.
 //!
 //! Each function creates exactly one control. All controls are created during
-//! [`SettingsPage::new`] before the message loop starts — Win32 requires
+//! [`super::SettingsPage::new`] before the message loop starts — Win32 requires
 //! controls to be created on the same thread as their parent window.
 
 use rust_i18n::t;

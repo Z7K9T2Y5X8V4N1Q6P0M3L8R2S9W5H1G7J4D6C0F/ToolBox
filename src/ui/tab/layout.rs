@@ -93,7 +93,7 @@ pub(crate) fn calculate_tab_page_rect(tab_control_hwnd: &HWND) -> AnyResult<RECT
     Ok(tab_page_rect)
 }
 
-/// Reposition and resize a control in a single [`SetWindowPos`] call.
+/// Reposition and resize a control in a single \[SetWindowPos\] call.
 ///
 /// Uses `SWP_NOZORDER | SWP_NOCOPYBITS` to avoid unnecessary repaints
 /// and Z-order changes.

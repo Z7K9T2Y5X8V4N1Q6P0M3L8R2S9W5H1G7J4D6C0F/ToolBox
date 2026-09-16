@@ -1,6 +1,6 @@
 //! Settings page event registration.
 //!
-//! [`setup_all_events`] is the single entry point called from [`SettingsPage::new`].
+//! [`setup_all_events`] is the single entry point called from [`super::SettingsPage::new`].
 //! It wires up every event handler for the settings page in the correct order.
 
 use winsafe::{AnyResult, HwndPlace, POINT, SCROLLINFO, SIZE, co, gui, msg, prelude::*};
@@ -15,7 +15,7 @@ use super::{
 
 /// Wire up all event handlers for the settings page.
 ///
-/// Must be called once during [`SettingsPage::new`], after all controls
+/// Must be called once during [`super::SettingsPage::new`], after all controls
 /// are constructed but before the message loop starts.
 pub(super) fn setup_all_events(
     tab_page: &gui::TabPage,

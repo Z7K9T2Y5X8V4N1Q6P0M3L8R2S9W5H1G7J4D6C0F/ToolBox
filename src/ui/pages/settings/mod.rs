@@ -18,7 +18,7 @@
 //! # Module Structure
 //! - [`state`]  — [`CheckboxId`] enum: labels, descriptions, and control IDs
 //! - [`build`]  — constructs all controls (tab page, group box, panels, checkboxes, buttons)
-//! - [`layout`] — DPI-aware layout constants, [`CheckboxLayoutCalculator`], [`SettingsPageLayout`]
+//! - [`layout`] — DPI-aware layout constants, [`layout::CheckboxLayoutCalculator`], [`layout::SettingsPageLayout`]
 //! - [`scroll`] — vertical scrollbar and mouse wheel event handlers
 //! - [`event`]  — resize, button, and status bar hover event registration
 //! - [`page`]   — [`SettingsPage`] struct: public API for construction and text updates

@@ -12,7 +12,7 @@ use crate::{
 
 /// Run all initialization steps in the correct order.
 ///
-/// This must be called once, at the very start of [`MainWindow::create_and_run`],
+/// This must be called once, at the very start of [`crate::app::MainWindow::create_and_run`],
 /// before any Win32 window or control is created.
 ///
 /// # Initialization sequence

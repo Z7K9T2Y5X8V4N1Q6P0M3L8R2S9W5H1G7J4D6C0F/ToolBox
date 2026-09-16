@@ -5,16 +5,22 @@
 //! and called from [`register_all_events`].
 
 use rust_i18n::t;
-use windows::Win32::UI::WindowsAndMessaging::WM_SETTINGCHANGE;
+use windows::Win32::{
+    Foundation::HWND as RawHwnd,
+    UI::WindowsAndMessaging::{
+        IsIconic, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_SETTINGCHANGE,
+    },
+};
 use winsafe::prelude::{GuiEventsParent, GuiEventsWindow, GuiWindow};
 use winsafe::{co, gui};
 
-use crate::ui::font::FontSyncResult;
-use crate::ui::menu;
-use crate::ui::tab::TabContainer;
-use crate::ui::window::layout::{self, apply_minimum_window_size};
+use crate::{
+    app::MainWindow,
+    ui::{font::FontSyncResult, menu, tab::TabContainer},
+};
 
-use super::MainWindow;
+use super::instance;
+use crate::ui::window::layout::{self, apply_minimum_window_size};
 
 /// Register all event handlers for the main window.
 ///
@@ -27,7 +33,32 @@ pub fn register_all_events(main_window_instance: &MainWindow) -> winsafe::AnyRes
     register_window_size_event(main_window_instance);
     register_window_app_message_event(main_window_instance);
     register_window_setting_change_event(main_window_instance);
+    register_restore_instance_event(main_window_instance);
     Ok(())
+}
+
+/// On registered restore message: un-minimize if iconic and bring to foreground.
+fn register_restore_instance_event(main_window_instance: &MainWindow) {
+    let restore_message_id = instance::get_restore_window_message_id();
+    if restore_message_id == 0 {
+        return;
+    }
+
+    let cloned_main_window_instance = main_window_instance.clone();
+    main_window_instance.main_window.on().wm(
+        unsafe { co::WM::from_raw(restore_message_id) },
+        move |_| {
+            let main_window_raw_hwnd =
+                RawHwnd(cloned_main_window_instance.main_window.hwnd().ptr());
+
+            if unsafe { IsIconic(main_window_raw_hwnd).as_bool() } {
+                let _ = unsafe { ShowWindow(main_window_raw_hwnd, SW_RESTORE) };
+            }
+            let _ = unsafe { SetForegroundWindow(main_window_raw_hwnd) };
+
+            Ok(0)
+        },
+    );
 }
 
 /// On WM_CREATE: attach the menu bar, center window, and apply the initial system font.

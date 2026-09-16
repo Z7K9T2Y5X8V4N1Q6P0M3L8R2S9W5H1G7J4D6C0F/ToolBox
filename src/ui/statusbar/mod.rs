@@ -4,7 +4,7 @@
 //! a description of whichever checkbox the mouse is currently hovering over.
 //!
 //! # Module Structure
-//! - [`build`] — creates the [`gui::StatusBar`] control
+//! - [`build`] — creates the [`winsafe::gui::StatusBar`] control
 //! - [`event`] — registers mouse hover/leave events on each checkbox
 
 mod build;

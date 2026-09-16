@@ -1,7 +1,7 @@
 //! [`CheckboxId`] — the canonical identifier for each settings checkbox.
 //!
 //! Each variant carries three pieces of metadata, all accessed via methods:
-//! - A Win32 control ID used when creating the [`gui::Button`]
+//! - A Win32 control ID used when creating the [`winsafe::gui::Button`]
 //! - An i18n key for the checkbox label text
 //! - An i18n key for the status bar description shown on hover
 

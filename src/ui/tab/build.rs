@@ -1,6 +1,6 @@
 //! Tab control construction.
 //!
-//! The tab control is built once during [`TabContainer::new`] and its titles
+//! The tab control is built once during [`super::TabContainer::new`] and its titles
 //! are refreshed on every locale change via [`get_tab_control_titles`].
 
 use rust_i18n::t;

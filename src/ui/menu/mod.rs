@@ -6,8 +6,8 @@
 //!
 //! # Module Structure
 //! - [`state`] — menu command ID constants
-//! - [`build`] — constructs and rebuilds the [`HMENU`] tree
-//! - [`event`] — registers WM_COMMAND handlers on [`MainWindow`]
+//! - [`build`] — constructs and rebuilds the [`winsafe::HMENU`] tree
+//! - [`event`] — registers WM_COMMAND handlers on [`crate::app::MainWindow`]
 
 mod build;
 mod event;

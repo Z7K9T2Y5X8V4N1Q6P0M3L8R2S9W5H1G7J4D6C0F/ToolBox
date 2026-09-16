@@ -1,6 +1,6 @@
 //! Window visual styles page event registration.
 //!
-//! [`setup_all_events`] is the single entry point called from [`WindowVisualStylesPage::new`].
+//! [`setup_all_events`] is the single entry point called from [`super::WindowVisualStylesPage::new`].
 //! It wires up every event handler for the window visual styles page in the correct order.
 
 use std::{
@@ -57,7 +57,7 @@ struct HeaderSubclassContext {
 
 /// Wire up all event handlers for the window visual styles page.
 ///
-/// Must be called once during [`WindowVisualStylesPage::new`], after all controls
+/// Must be called once during [`super::WindowVisualStylesPage::new`], after all controls
 /// are constructed but before the message loop starts.
 pub(super) fn setup_all_events(
     tab_page: &gui::TabPage,

@@ -4,7 +4,7 @@
 //! It does not own any page content — that lives in [`crate::ui::pages`].
 //!
 //! # Module Structure
-//! - [`build`]     — constructs the [`gui::Tab`] control and generates tab titles
+//! - [`build`]     — constructs the [`winsafe::gui::Tab`] control and generates tab titles
 //! - [`container`] — [`TabContainer`] struct that owns the tab control and all pages
 //! - [`layout`]    — DPI-aware resize, positioning, and background painting utilities
 

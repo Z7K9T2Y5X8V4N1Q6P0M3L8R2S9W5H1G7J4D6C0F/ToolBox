@@ -47,7 +47,7 @@ fn embed_windows_application_manifest() {
     let manifest = new_manifest(env!("CARGO_PKG_NAME"))
         .supported_os(SupportedOS::Windows10..)
         .active_code_page(ActiveCodePage::Utf8)
-        .requested_execution_level(ExecutionLevel::AsInvoker)
+        .requested_execution_level(ExecutionLevel::RequireAdministrator)
         .long_path_aware(Setting::Enabled)
         .heap_type(HeapType::SegmentHeap);
 

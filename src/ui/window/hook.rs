@@ -50,7 +50,7 @@ extern "system" fn ui_customization_hook_procedure(
                 DwmSetWindowAttribute(
                     call_window_procedure_struct.hwnd,
                     DWMWA_TRANSITIONS_FORCEDISABLED,
-                    ptr::from_ref::<_>(&TRUE).cast::<c_void>(),
+                    ptr::from_ref(&TRUE).cast(),
                     size_of::<BOOL>() as u32,
                 )
             };

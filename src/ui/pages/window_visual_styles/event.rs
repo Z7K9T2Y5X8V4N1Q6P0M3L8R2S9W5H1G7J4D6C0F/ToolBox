@@ -684,8 +684,8 @@ fn apply_process_list_to_view(
 /// Retrieve the PID of the currently selected row in the ListView, if any.
 fn get_currently_selected_process_id(listview: &gui::ListView) -> Option<u32> {
     let selected_item = listview.items().iter_selected().next()?;
-    let pid_text = selected_item.text(1);
-    pid_text.parse::<u32>().ok()
+    let process_id_text = selected_item.text(1);
+    process_id_text.parse::<u32>().ok()
 }
 
 /// Synchronize the items in the ListView with the new list of processes.

@@ -148,10 +148,10 @@ impl ProcessManager {
                     let is_name_matched = process_name_string
                         .to_lowercase()
                         .contains(&self.search_filter);
-                    let is_pid_matched =
+                    let is_process_id_matched =
                         process_id_number.to_string().contains(&self.search_filter);
 
-                    if !is_name_matched && !is_pid_matched {
+                    if !is_name_matched && !is_process_id_matched {
                         return None;
                     }
                 }

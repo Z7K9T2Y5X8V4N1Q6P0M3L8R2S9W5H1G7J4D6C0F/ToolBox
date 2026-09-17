@@ -14,6 +14,7 @@ load-path = "locales"
 [dependencies]
 anyhow = "1.0.104"
 dirs = "6.0.0"
+elevate-ti = { git = "https://github.com/Z7K9T2Y5X8V4N1Q6P0M3L8R2S9W5H1G7J4D6C0F/Elevate-TI.git", branch = "main" }
 env_logger = "0.11.11"
 log = "0.4.34"
 rust-i18n = "4.2.1"

@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dirs",
+ "elevate-ti",
  "embed-manifest",
  "embed-resource",
  "env_logger",
@@ -285,6 +286,16 @@ name = "either"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "252afb9ae5eaa683babdc6a068b3f5726eb19e05070c731f9b2a23a7c3e8ed34"
+
+[[package]]
+name = "elevate-ti"
+version = "0.1.0"
+source = "git+https://github.com/Z7K9T2Y5X8V4N1Q6P0M3L8R2S9W5H1G7J4D6C0F/Elevate-TI.git?branch=main#ad5cdcc0846f6beeda621402fb9e002196dccc79"
+dependencies = [
+ "anyhow",
+ "sysinfo",
+ "windows 0.58.0",
+]
 
 [[package]]
 name = "embed-manifest"

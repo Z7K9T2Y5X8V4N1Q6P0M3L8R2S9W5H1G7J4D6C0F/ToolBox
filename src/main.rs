@@ -1,15 +1,11 @@
 //! Application entry point.
 //!
-//! Initializes the i18n system and starts the main window. Any unhandled
-//! error that propagates out of the message loop is shown in an error dialog
-//! rather than printed to stderr.
-//!
-//! In release builds (`#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`),
-//! the application runs without a console window. In debug builds, a console
-//! is attached so panic messages and debug output remain visible.
+//! Enforces execution under the TrustedInstaller identity, manages single-instance
+//! execution, and initializes the application window.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use elevate_ti::{ElevationStatus, check_elevation_status, relaunch_as_trusted_installer};
 use rust_i18n::{i18n, t};
 use winsafe::{HWND, co, prelude::Handle};
 
@@ -23,6 +19,30 @@ mod error;
 mod ui;
 
 fn main() {
+    // 1. Verify elevation status before locking any single-instance mutex.
+    match check_elevation_status() {
+        Ok(ElevationStatus::RequiresElevation) => {
+            if let Err(elevation_error) = relaunch_as_trusted_installer() {
+                HWND::NULL
+                    .MessageBox(
+                        &format!("Failed to elevate to TrustedInstaller: {elevation_error}"),
+                        &t!("ERROR"),
+                        co::MB::OK | co::MB::ICONERROR,
+                    )
+                    .ok();
+            }
+            // Exit the parent process so the newly spawned TrustedInstaller instance runs.
+            return;
+        }
+        Ok(ElevationStatus::TrustedInstaller) => {
+            // Already elevated; proceed.
+        }
+        Err(check_error) => {
+            log::warn!("Could not evaluate TrustedInstaller token status: {check_error}");
+        }
+    }
+
+    // 2. Single-instance enforcement.
     let _single_instance_mutex_guard = match instance::check_single_instance() {
         SingleInstanceStatus::Primary(single_instance_mutex_guard) => single_instance_mutex_guard,
         SingleInstanceStatus::AlreadyRunning => return,
@@ -38,6 +58,7 @@ fn main() {
         }
     };
 
+    // 3. UI loop startup.
     if let Err(error) = app::MainWindow::create_and_run() {
         HWND::NULL
             .MessageBox(

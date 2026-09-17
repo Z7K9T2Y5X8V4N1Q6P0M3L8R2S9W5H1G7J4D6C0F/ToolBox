@@ -5,7 +5,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use elevate_ti::{ElevationStatus, check_elevation_status, relaunch_as_trusted_installer};
+use elevate_ti::ElevationStatus;
 use rust_i18n::{i18n, t};
 use winsafe::{HWND, co, prelude::Handle};
 
@@ -20,9 +20,9 @@ mod ui;
 
 fn main() {
     // 1. Verify elevation status before locking any single-instance mutex.
-    match check_elevation_status() {
+    match elevate_ti::check_elevation_status() {
         Ok(ElevationStatus::RequiresElevation) => {
-            if let Err(elevation_error) = relaunch_as_trusted_installer() {
+            if let Err(elevation_error) = elevate_ti::relaunch_as_trusted_installer() {
                 HWND::NULL
                     .MessageBox(
                         &format!("Failed to elevate to TrustedInstaller: {elevation_error}"),

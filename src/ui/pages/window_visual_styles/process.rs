@@ -141,15 +141,13 @@ impl ProcessManager {
             .processes()
             .iter()
             .filter_map(|(process_id, process)| {
-                let process_id_number = process_id.as_u32();
-                let process_name_string = process.name().to_string_lossy().to_string();
+                let process_id = process_id.as_u32();
+                let process_name = process.name().to_string_lossy().to_string();
 
                 if is_filter_active {
-                    let is_name_matched = process_name_string
-                        .to_lowercase()
-                        .contains(&self.search_filter);
+                    let is_name_matched = process_name.to_lowercase().contains(&self.search_filter);
                     let is_process_id_matched =
-                        process_id_number.to_string().contains(&self.search_filter);
+                        process_id.to_string().contains(&self.search_filter);
 
                     if !is_name_matched && !is_process_id_matched {
                         return None;
@@ -157,8 +155,8 @@ impl ProcessManager {
                 }
 
                 Some(ProcessItem {
-                    process_id: process_id_number,
-                    process_name: process_name_string,
+                    process_id,
+                    process_name,
                 })
             })
             .collect();

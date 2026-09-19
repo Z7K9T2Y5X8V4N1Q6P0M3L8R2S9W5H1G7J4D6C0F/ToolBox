@@ -22,7 +22,7 @@ fn main() {
     // 1. Verify elevation status before locking any single-instance mutex.
     match elevate_ti::check_elevation_status() {
         Ok(ElevationStatus::RequiresElevation) => {
-            if let Err(elevation_error) = elevate_ti::relaunch_as_trusted_installer() {
+            if let Err(elevation_error) = elevate_ti::relaunch_as_trustedinstaller() {
                 HWND::NULL
                     .MessageBox(
                         &format!("Failed to elevate to TrustedInstaller: {elevation_error}"),

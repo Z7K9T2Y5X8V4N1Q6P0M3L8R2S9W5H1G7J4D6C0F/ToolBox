@@ -15,19 +15,22 @@
 //!   the default config is written over the corrupt file, and returned.
 //! - If the file exists and parses successfully, it is returned as-is.
 
-use std::{fs, path::PathBuf};
+use std::{ffi::OsString, fs, os::windows::ffi::OsStringExt, path::PathBuf};
 
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
-use windows::Win32::{
-    Foundation::{CloseHandle, HANDLE},
-    System::{
-        Com::CoTaskMemFree,
-        RemoteDesktop::{ProcessIdToSessionId, WTSQueryUserToken},
-        Threading::GetCurrentProcessId,
+use windows::{
+    Win32::{
+        Foundation::{CloseHandle, HANDLE},
+        System::{
+            Com::CoTaskMemFree,
+            RemoteDesktop::{ProcessIdToSessionId, WTSQueryUserToken},
+            Threading::GetCurrentProcessId,
+        },
+        UI::Shell::{FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG, SHGetKnownFolderPath},
     },
-    UI::Shell::{FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG, SHGetKnownFolderPath},
+    core::PWSTR,
 };
 use winsafe::{HWND, co, prelude::Handle};
 
@@ -84,40 +87,10 @@ impl AppConfig {
     }
 
     /// Resolve the Roaming AppData directory corresponding to the logged-in interactive user.
-    ///
-    /// Obtains the Session ID associated with the current GUI process, retrieves the corresponding
-    /// user token, and queries [`SHGetKnownFolderPath`] using that token.
     fn resolve_active_user_appdata_dir() -> Option<PathBuf> {
-        let mut current_process_session_id = 0;
-        let query_session_result =
-            unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_process_session_id) };
-        if query_session_result.is_err() {
-            return None;
-        }
-
-        let mut user_token = HANDLE::default();
-        if unsafe { WTSQueryUserToken(current_process_session_id, &mut user_token) }.is_err() {
-            return None;
-        }
-
-        let folder_result = unsafe {
-            SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG(0), user_token)
-        };
-
-        unsafe {
-            let _ = CloseHandle(user_token);
-        }
-
-        match folder_result {
-            Ok(path_pwstr) if !path_pwstr.is_null() => {
-                let path_string = unsafe { path_pwstr.to_string() }.ok();
-                unsafe {
-                    CoTaskMemFree(Some(path_pwstr.0.cast()));
-                }
-                path_string.map(PathBuf::from)
-            }
-            _ => None,
-        }
+        let current_session_id = fetch_current_process_session_id()?;
+        let user_token_guard = query_session_user_token(current_session_id)?;
+        fetch_roaming_appdata_by_token(user_token_guard.as_raw())
     }
 
     /// Load the config from disk, handling all error cases gracefully.
@@ -238,4 +211,102 @@ impl AppConfig {
 
         Ok(())
     }
+}
+
+// ---------------------------------------------------------------------------
+// Active User Session Path Helpers
+// ---------------------------------------------------------------------------
+
+/// RAII guard for a Win32 [`HANDLE`] ensuring automatic closure on drop.
+struct HandleGuard {
+    raw_handle: HANDLE,
+}
+
+impl HandleGuard {
+    /// Create a new handle guard wrapper.
+    fn new(raw_handle: HANDLE) -> Self {
+        Self { raw_handle }
+    }
+
+    /// Access the underlying raw Win32 [`HANDLE`].
+    fn as_raw(&self) -> HANDLE {
+        self.raw_handle
+    }
+}
+
+impl Drop for HandleGuard {
+    fn drop(&mut self) {
+        if !self.raw_handle.is_invalid() {
+            unsafe {
+                let _ = CloseHandle(self.raw_handle);
+            }
+        }
+    }
+}
+
+/// RAII guard for a COM-allocated [`PWSTR`] buffer ensuring memory is freed on drop.
+struct CoTaskMemGuard {
+    raw_pwstr: PWSTR,
+}
+
+impl CoTaskMemGuard {
+    /// Create a new COM task memory guard wrapper.
+    fn new(raw_pwstr: PWSTR) -> Self {
+        Self { raw_pwstr }
+    }
+
+    /// Directly convert the UTF-16 buffer to a native Windows [`PathBuf`].
+    fn to_path_buf(&self) -> PathBuf {
+        let utf16_slice = unsafe { self.raw_pwstr.as_wide() };
+        PathBuf::from(OsString::from_wide(utf16_slice))
+    }
+}
+
+impl Drop for CoTaskMemGuard {
+    fn drop(&mut self) {
+        if !self.raw_pwstr.is_null() {
+            unsafe {
+                CoTaskMemFree(Some(self.raw_pwstr.0.cast()));
+            }
+        }
+    }
+}
+
+/// Retrieve the session identifier of the current GUI process.
+fn fetch_current_process_session_id() -> Option<u32> {
+    let mut current_process_session_id = 0;
+    let query_session_result =
+        unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_process_session_id) };
+
+    if query_session_result.is_ok() {
+        Some(current_process_session_id)
+    } else {
+        None
+    }
+}
+
+/// Acquire the primary user token associated with the given session ID.
+fn query_session_user_token(session_id: u32) -> Option<HandleGuard> {
+    let mut user_token = HANDLE::default();
+    let query_token_result = unsafe { WTSQueryUserToken(session_id, &mut user_token) };
+
+    if query_token_result.is_ok() && !user_token.is_invalid() {
+        Some(HandleGuard::new(user_token))
+    } else {
+        None
+    }
+}
+
+/// Query the roaming AppData path for the user identified by the specified token.
+fn fetch_roaming_appdata_by_token(user_token: HANDLE) -> Option<PathBuf> {
+    let folder_path_result =
+        unsafe { SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG(0), user_token) };
+
+    let path_pwstr = match folder_path_result {
+        Ok(path_pwstr) if !path_pwstr.is_null() => path_pwstr,
+        _ => return None,
+    };
+
+    let memory_guard = CoTaskMemGuard::new(path_pwstr);
+    Some(memory_guard.to_path_buf())
 }

@@ -91,6 +91,14 @@ INSTALL_UI_CUSTOMIZATION_HOOK_FAILED:
   en-US: "Failed to install UI customization hook"
   zh-CN: "安装界面自定义钩子失败"
 
+ERROR_ELEVATE_TO_TRUSTED_INSTALLER_FAILED:
+  en-US: "Failed to elevate to TrustedInstaller: %{elevation_error}"
+  zh-CN: "提升至 TrustedInstaller 权限失败: %{elevation_error}"
+
+ERROR_EVALUATE_TRUSTED_INSTALLER_STATUS_FAILED:
+  en-US: "Failed to evaluate TrustedInstaller token status: %{check_error}"
+  zh-CN: "检查 TrustedInstaller 令牌状态失败: %{check_error}"
+
 ERROR_GET_NONCLIENTMETRICS_FAILED:
   en-US: "Failed to get system non-client metrics"
   zh-CN: "无法获取系统非客户区度量信息"

@@ -14,7 +14,7 @@
 
 mod build;
 mod event;
-mod init;
+pub mod init;
 pub mod instance;
 
 pub use build::MainWindow;

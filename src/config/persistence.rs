@@ -32,7 +32,8 @@ use windows::{
     },
     core::PWSTR,
 };
-use winsafe::{HWND, co, prelude::Handle};
+
+use crate::error;
 
 use super::AppLanguage;
 
@@ -164,7 +165,7 @@ impl AppConfig {
     ///
     /// Panics if the subsequent save also fails.
     fn handle_corrupted_config(error: anyhow::Error) -> Self {
-        Self::show_error_dialog(&t!(
+        error::show_error_dialog(&t!(
             "CONFIG_PARSE_FAILED_USING_DEFAULT",
             parse_error = error
         ));
@@ -177,13 +178,6 @@ impl AppConfig {
             );
         }
         default_config
-    }
-
-    /// Display an error dialog using the null HWND (no parent window).
-    fn show_error_dialog(message: &str) {
-        HWND::NULL
-            .MessageBox(message, &t!("ERROR"), co::MB::OK | co::MB::ICONERROR)
-            .ok();
     }
 
     /// Serialize this config to TOML and write it to the config file path.

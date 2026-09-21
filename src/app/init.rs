@@ -1,4 +1,4 @@
-//! Application initialization routines that run before the main window is created.
+//! Application initialization routines that run before window creation and pre-flight checks.
 //!
 //! Call order matters here: the logger must be initialized first to capture all
 //! subsequent log output, locale must be set before any UI text is rendered,
@@ -12,8 +12,8 @@ use crate::{
 
 /// Run all initialization steps in the correct order.
 ///
-/// This must be called once, at the very start of [`crate::app::MainWindow::create_and_run`],
-/// before any Win32 window or control is created.
+/// This must be called once, at the very beginning of [`crate::main`],
+/// before checking elevation, acquiring single-instance locks, or creating Win32 windows.
 ///
 /// # Initialization sequence
 /// 1. Logger — captures debug output from all subsequent steps
@@ -45,5 +45,5 @@ fn setup_initial_locale() {
 /// or corrupt, the error dialog is still shown in the system language.
 fn setup_config_locale() {
     let app_config = AppConfig::load();
-    rust_i18n::set_locale(&app_config.language.as_locale_str());
+    rust_i18n::set_locale(app_config.language.as_locale_str());
 }

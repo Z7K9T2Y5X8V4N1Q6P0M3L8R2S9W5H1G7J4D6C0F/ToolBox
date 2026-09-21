@@ -5,9 +5,8 @@ use std::{cell::RefCell, rc::Rc};
 use rust_i18n::t;
 use winsafe::{AnyResult, co, gui};
 
+use super::event;
 use crate::ui::{font::FontManager, statusbar, tab::TabContainer};
-
-use super::{event, init};
 
 /// The root window of the application.
 ///
@@ -33,8 +32,6 @@ impl MainWindow {
     /// Returns when the user closes the window. The return value is the exit
     /// code that should be passed back to the OS.
     pub fn create_and_run() -> AnyResult<i32> {
-        init::initialize_application();
-
         let window_title = t!("TOOLBOX_TITLE");
         let main_window = gui::WindowMain::new(gui::WindowMainOpts {
             title: &window_title,

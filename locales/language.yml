@@ -91,11 +91,11 @@ INSTALL_UI_CUSTOMIZATION_HOOK_FAILED:
   en-US: "Failed to install UI customization hook"
   zh-CN: "安装界面自定义钩子失败"
 
-ERROR_ELEVATE_TO_TRUSTED_INSTALLER_FAILED:
+ERROR_ELEVATE_TO_TRUSTEDINSTALLER_FAILED:
   en-US: "Failed to elevate to TrustedInstaller: %{elevation_error}"
   zh-CN: "提升至 TrustedInstaller 权限失败: %{elevation_error}"
 
-ERROR_EVALUATE_TRUSTED_INSTALLER_STATUS_FAILED:
+ERROR_EVALUATE_TRUSTEDINSTALLER_STATUS_FAILED:
   en-US: "Failed to evaluate TrustedInstaller token status: %{check_error}"
   zh-CN: "检查 TrustedInstaller 令牌状态失败: %{check_error}"
 

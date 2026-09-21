@@ -33,7 +33,7 @@ enum ElevationOutcome {
 fn main() {
     init::initialize_application();
 
-    if ensure_trusted_installer() == ElevationOutcome::Terminate {
+    if ensure_trustedinstaller() == ElevationOutcome::Terminate {
         return;
     }
 
@@ -49,13 +49,13 @@ fn main() {
 /// Ensure the application is executing under the TrustedInstaller identity.
 ///
 /// Handles automatic elevation relaunch or displays an error dialog if checks fail.
-fn ensure_trusted_installer() -> ElevationOutcome {
+fn ensure_trustedinstaller() -> ElevationOutcome {
     match elevate_ti::check_elevation_status() {
         Ok(ElevationStatus::TrustedInstaller) => ElevationOutcome::Proceed,
         Ok(ElevationStatus::RequiresElevation) => {
             if let Err(elevation_error) = elevate_ti::relaunch_as_trustedinstaller() {
                 error::show_error_dialog(&t!(
-                    "ERROR_ELEVATE_TO_TRUSTED_INSTALLER_FAILED",
+                    "ERROR_ELEVATE_TO_TRUSTEDINSTALLER_FAILED",
                     elevation_error = elevation_error
                 ));
             }
@@ -63,7 +63,7 @@ fn ensure_trusted_installer() -> ElevationOutcome {
         }
         Err(check_error) => {
             error::show_error_dialog(&t!(
-                "ERROR_EVALUATE_TRUSTED_INSTALLER_STATUS_FAILED",
+                "ERROR_EVALUATE_TRUSTEDINSTALLER_STATUS_FAILED",
                 check_error = check_error
             ));
             ElevationOutcome::Terminate

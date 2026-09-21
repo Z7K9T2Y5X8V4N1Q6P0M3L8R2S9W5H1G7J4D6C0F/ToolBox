@@ -14,7 +14,7 @@
 //! The hook must be installed before any window is created so it can intercept
 //! their `WM_CREATE` messages.
 
-use std::{ffi::c_void, ptr};
+use std::ptr;
 use windows::{
     Win32::{
         Foundation::{BOOL, LPARAM, LRESULT, TRUE, WPARAM},

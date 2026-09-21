@@ -1,7 +1,13 @@
 //! Config file load and save logic.
 //!
-//! The config file is stored at `{system config dir}/{app name}/CONFIG.toml`.
-//! On Windows this resolves to `%APPDATA%\{app name}\CONFIG.toml`.
+//! The config file is stored at `{user config dir}/{app name}/CONFIG.toml`.
+//! Under normal circumstances, this resolves to `%APPDATA%\{app name}\CONFIG.toml`.
+//!
+//! When running under high-privilege system tokens (such as `TrustedInstaller`),
+//! standard environment variables resolve to `systemprofile`. To ensure user preferences
+//! persist correctly for the interactive user—across both local console sessions and
+//! remote desktop (RDP) multi-user environments—this module resolves the session token
+//! of the active desktop session and queries the true roaming AppData path.
 //!
 //! # Load behavior
 //! - If the file does not exist, a default config is written and returned.
@@ -14,6 +20,15 @@ use std::{fs, path::PathBuf};
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
+use windows::Win32::{
+    Foundation::{CloseHandle, HANDLE},
+    System::{
+        Com::CoTaskMemFree,
+        RemoteDesktop::{ProcessIdToSessionId, WTSQueryUserToken},
+        Threading::GetCurrentProcessId,
+    },
+    UI::Shell::{FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG, SHGetKnownFolderPath},
+};
 use winsafe::{HWND, co, prelude::Handle};
 
 use super::AppLanguage;
@@ -52,14 +67,57 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    /// Returns the expected path to the config file, or `None` if the
-    /// system config directory cannot be determined.
+    /// Returns the expected path to the config file for the active interactive user.
+    ///
+    /// When running under elevated system tokens such as TrustedInstaller, queries
+    /// the current desktop session token to correctly resolve the physical or remote
+    /// logged-in user's `%APPDATA%` directory instead of `systemprofile`. Falls back
+    /// to [`dirs::config_dir`] if session queries fail.
     pub fn config_path() -> Option<PathBuf> {
-        dirs::config_dir().map(|base_config_directory| {
-            base_config_directory
-                .join(env!("CARGO_PKG_NAME"))
-                .join("CONFIG.toml")
-        })
+        Self::resolve_active_user_appdata_dir()
+            .or_else(dirs::config_dir)
+            .map(|base_config_directory| {
+                base_config_directory
+                    .join(env!("CARGO_PKG_NAME"))
+                    .join("CONFIG.toml")
+            })
+    }
+
+    /// Resolve the Roaming AppData directory corresponding to the logged-in interactive user.
+    ///
+    /// Obtains the Session ID associated with the current GUI process, retrieves the corresponding
+    /// user token, and queries [`SHGetKnownFolderPath`] using that token.
+    fn resolve_active_user_appdata_dir() -> Option<PathBuf> {
+        let mut current_process_session_id = 0;
+        let query_session_result =
+            unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_process_session_id) };
+        if query_session_result.is_err() {
+            return None;
+        }
+
+        let mut user_token = HANDLE::default();
+        if unsafe { WTSQueryUserToken(current_process_session_id, &mut user_token) }.is_err() {
+            return None;
+        }
+
+        let folder_result = unsafe {
+            SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG(0), user_token)
+        };
+
+        unsafe {
+            let _ = CloseHandle(user_token);
+        }
+
+        match folder_result {
+            Ok(path_pwstr) if !path_pwstr.is_null() => {
+                let path_string = unsafe { path_pwstr.to_string() }.ok();
+                unsafe {
+                    CoTaskMemFree(Some(path_pwstr.0.cast()));
+                }
+                path_string.map(PathBuf::from)
+            }
+            _ => None,
+        }
     }
 
     /// Load the config from disk, handling all error cases gracefully.

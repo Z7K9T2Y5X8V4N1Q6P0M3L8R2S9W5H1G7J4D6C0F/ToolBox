@@ -17,4 +17,4 @@ mod event;
 pub mod init;
 pub mod instance;
 
-pub use build::MainWindow;
+pub use build::{MainWindow, UserConfirmationOutcome};

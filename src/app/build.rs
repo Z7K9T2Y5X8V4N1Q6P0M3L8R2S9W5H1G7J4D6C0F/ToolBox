@@ -8,6 +8,15 @@ use winsafe::{AnyResult, co, gui, msg, prelude::*};
 use super::event;
 use crate::ui::{font::FontManager, statusbar, tab::TabContainer};
 
+/// The user's response to an interactive confirmation dialog.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UserConfirmationOutcome {
+    /// The user confirmed the action (clicked "Yes").
+    Confirmed,
+    /// The user declined or cancelled the action (clicked "No" or closed dialog).
+    Cancelled,
+}
+
 /// The root window of the application.
 ///
 /// Holds references to all top-level UI components. Cloning is cheap
@@ -55,6 +64,27 @@ impl MainWindow {
 
         event::register_all_events(&main_window_instance)?;
         main_window_instance.main_window.run_main(None)
+    }
+
+    /// Display a modal confirmation message box with "Yes" and "No" choices.
+    ///
+    /// The dialog is centered on and blocks the main application window until answered.
+    pub fn prompt_confirmation(
+        &self,
+        title: &str,
+        message: &str,
+    ) -> AnyResult<UserConfirmationOutcome> {
+        let dialog_result = self.main_window.hwnd().MessageBox(
+            message,
+            title,
+            co::MB::YESNO | co::MB::ICONQUESTION,
+        )?;
+
+        if dialog_result == co::DLGID::YES {
+            Ok(UserConfirmationOutcome::Confirmed)
+        } else {
+            Ok(UserConfirmationOutcome::Cancelled)
+        }
     }
 
     /// Enqueue an error message to be displayed asynchronously on the UI thread.

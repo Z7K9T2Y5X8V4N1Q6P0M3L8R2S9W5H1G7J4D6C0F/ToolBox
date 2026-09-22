@@ -10,7 +10,7 @@ use winsafe::{
 };
 
 use crate::{
-    app::MainWindow,
+    app::{MainWindow, UserConfirmationOutcome},
     config::{AppConfig, AppLanguage},
     system,
 };
@@ -31,10 +31,20 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
     main_window_instance.main_window.on().wm_command_acc_menu(
         IDM_OPTIONS_RESTART_EXPLORER,
         move || {
+            let confirmation = cloned_main_window_for_restart_explorer.prompt_confirmation(
+                &t!("MENU_OPTIONS_RESTART_EXPLORER"),
+                &t!("CONFIRM_RESTART_EXPLORER_MESSAGE"),
+            )?;
+
+            if confirmation != UserConfirmationOutcome::Confirmed {
+                return Ok(());
+            }
+
             if let Err(restart_error) = system::restart_desktop_shell() {
                 cloned_main_window_for_restart_explorer
                     .post_deferred_error(restart_error.to_string());
             }
+
             Ok(())
         },
     );

@@ -5,13 +5,14 @@
 
 use rust_i18n::t;
 use winsafe::{
-    AnyResult, co, msg,
+    AnyResult,
     prelude::{GuiEventsParent, GuiWindow},
 };
 
 use crate::{
     app::MainWindow,
     config::{AppConfig, AppLanguage},
+    system,
 };
 
 use super::state::{
@@ -26,10 +27,17 @@ use super::state::{
 /// Must be called once during main window event setup, before the
 /// message loop starts.
 pub fn register_menu_events(main_window_instance: &MainWindow) {
-    main_window_instance
-        .main_window
-        .on()
-        .wm_command_acc_menu(IDM_OPTIONS_RESTART_EXPLORER, move || Ok(()));
+    let cloned_main_window_for_restart_explorer = main_window_instance.clone();
+    main_window_instance.main_window.on().wm_command_acc_menu(
+        IDM_OPTIONS_RESTART_EXPLORER,
+        move || {
+            if let Err(restart_error) = system::restart_desktop_shell() {
+                cloned_main_window_for_restart_explorer
+                    .post_deferred_error(restart_error.to_string());
+            }
+            Ok(())
+        },
+    );
 
     main_window_instance
         .main_window
@@ -94,10 +102,9 @@ fn register_language_menu_handler(
 /// 4. Save the new language preference to the config file.
 ///
 /// # Error deferral
-/// If saving the config fails, the error is stored in
-/// [`MainWindow::pending_error_message`] and a [`winsafe::co::WM::APP`] message
-/// is posted rather than showing a dialog immediately. This avoids reentrancy
-/// issues that can occur when a modal dialog is opened inside a menu handler.
+/// If saving the config fails, the error is queued via
+/// [`MainWindow::post_deferred_error`] rather than showing a dialog immediately.
+/// This avoids reentrancy issues that can occur when a modal dialog is opened inside a menu handler.
 fn apply_language_change(
     main_window_instance: &MainWindow,
     locale: &str,
@@ -119,15 +126,7 @@ fn apply_language_change(
 
     if let Err(save_error) = config.save() {
         let error_message = t!("CONFIG_SAVE_FAILED", save_error = save_error).to_string();
-        *main_window_instance.pending_error_message.borrow_mut() = Some(error_message);
-
-        unsafe {
-            main_window_hwnd.PostMessage(msg::Wm {
-                msg_id: co::WM::APP,
-                wparam: 0,
-                lparam: 0,
-            })?;
-        }
+        main_window_instance.post_deferred_error(error_message);
     }
 
     Ok(())

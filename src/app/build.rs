@@ -3,7 +3,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use rust_i18n::t;
-use winsafe::{AnyResult, co, gui};
+use winsafe::{AnyResult, co, gui, msg, prelude::*};
 
 use super::event;
 use crate::ui::{font::FontManager, statusbar, tab::TabContainer};
@@ -55,5 +55,25 @@ impl MainWindow {
 
         event::register_all_events(&main_window_instance)?;
         main_window_instance.main_window.run_main(None)
+    }
+
+    /// Enqueue an error message to be displayed asynchronously on the UI thread.
+    ///
+    /// Posts a [`winsafe::co::WM::APP`] message to the root window message queue.
+    /// This prevents modal dialogs from blocking inner menu dispatch loops or
+    /// causing nested message pump reentrancy.
+    pub fn post_deferred_error(&self, error_message: String) {
+        self.pending_error_message.replace(Some(error_message));
+
+        unsafe {
+            self.main_window
+                .hwnd()
+                .PostMessage(msg::Wm {
+                    msg_id: co::WM::APP,
+                    wparam: 0,
+                    lparam: 0,
+                })
+                .ok();
+        }
     }
 }

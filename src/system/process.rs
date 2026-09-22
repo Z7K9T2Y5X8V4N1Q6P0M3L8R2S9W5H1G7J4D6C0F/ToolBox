@@ -4,6 +4,7 @@
 //! the implementation found in System Informer (Process Hacker).
 
 use anyhow::{Context, Result, bail};
+use rust_i18n::t;
 use windows::Win32::{
     Foundation::{CloseHandle, HANDLE},
     System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
@@ -37,12 +38,15 @@ impl Drop for ProcessHandleGuard {
     }
 }
 
-/// Restart the Windows desktop shell (Explorer.exe) matching System Informer's logic.
+/// Restart the Windows desktop shell (Explorer.exe) matching [System Informer]'s logic
 ///
 /// # Operational Behavior
 /// Identifies the process owning the primary desktop shell window (`GetShellWindow`),
 /// opens the target process with `PROCESS_TERMINATE` rights, and terminates it.
 /// System Winlogon then detects the exit and automatically relaunches the shell.
+///
+/// # References
+/// - [System Informer Repository](https://github.com/winsiderss/systeminformer)
 ///
 /// # Errors
 /// Returns an error if:
@@ -53,30 +57,30 @@ impl Drop for ProcessHandleGuard {
 pub fn restart_desktop_shell() -> Result<()> {
     let shell_window_hwnd = unsafe { GetShellWindow() };
     if shell_window_hwnd.0.is_null() {
-        bail!("Desktop shell window not found");
+        bail!("{}", t!("ERROR_DESKTOP_SHELL_WINDOW_NOT_FOUND"));
     }
 
-    let mut shell_process_id: u32 = 0;
+    let mut shell_process_id = 0;
     let window_thread_id =
         unsafe { GetWindowThreadProcessId(shell_window_hwnd, Some(&mut shell_process_id)) };
     if window_thread_id == 0 || shell_process_id == 0 {
-        bail!("Failed to query client ID from desktop shell window");
+        bail!("{}", t!("ERROR_QUERY_SHELL_CLIENT_ID_FAILED"));
     }
 
     let process_handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, shell_process_id) }
         .with_context(|| {
-            format!(
-                "Failed to open shell process (PID: {}) with PROCESS_TERMINATE",
-                shell_process_id
+            t!(
+                "ERROR_OPEN_SHELL_PROCESS_FAILED",
+                shell_process_id = shell_process_id
             )
         })?;
     let process_guard = ProcessHandleGuard::new(process_handle);
 
     unsafe {
         TerminateProcess(process_guard.as_raw(), 0).with_context(|| {
-            format!(
-                "Failed to terminate shell process (PID: {})",
-                shell_process_id
+            t!(
+                "ERROR_TERMINATE_SHELL_PROCESS_FAILED",
+                shell_process_id = shell_process_id
             )
         })?;
     }

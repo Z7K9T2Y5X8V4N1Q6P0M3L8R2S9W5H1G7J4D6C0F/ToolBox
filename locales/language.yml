@@ -286,3 +286,19 @@ MENU_VISUAL_STYLES_APPLY_CLASSIC:
 CONFIRM_RESTART_EXPLORER_MESSAGE:
   en-US: "Are you sure you want to restart File Explorer?\nThis will close all open Explorer windows and may interrupt certain running operations"
   zh-CN: "确定要重启文件资源管理器吗?\n这将关闭所有资源管理器窗口并可能中断某些正在运行的程序"
+
+ERROR_DESKTOP_SHELL_WINDOW_NOT_FOUND:
+  en-US: "Desktop shell window not found"
+  zh-CN: "未找到桌面外壳窗口"
+
+ERROR_QUERY_SHELL_CLIENT_ID_FAILED:
+  en-US: "Failed to query client ID from desktop shell window"
+  zh-CN: "从桌面外壳窗口查询客户端 ID 失败"
+
+ERROR_OPEN_SHELL_PROCESS_FAILED:
+  en-US: "Failed to open shell process (PID: %{shell_process_id}) with PROCESS_TERMINATE"
+  zh-CN: "使用 PROCESS_TERMINATE 权限打开外壳进程（PID: %{shell_process_id}）失败"
+
+ERROR_TERMINATE_SHELL_PROCESS_FAILED:
+  en-US: "Failed to terminate shell process (PID: %{shell_process_id})"
+  zh-CN: "终止外壳进程（PID: %{shell_process_id}）失败"

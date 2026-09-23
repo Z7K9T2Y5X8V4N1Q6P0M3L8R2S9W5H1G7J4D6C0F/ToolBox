@@ -350,3 +350,11 @@ ERROR_REGISTRY_OPEN_CREATE_KEY_FAILED:
 ERROR_REGISTRY_SET_VALUE_FAILED:
   en-US: "Failed to write registry value: %{value_name}"
   zh-CN: "写入注册表键值失败: %{value_name}"
+
+ERROR_OPEN_WINLOGON_KEY_FAILED:
+  en-US: "Failed to open Winlogon registry key: %{registry_path}"
+  zh-CN: "打开 Winlogon 注册表项失败: %{registry_path}"
+
+ERROR_SET_AUTORESTARTSHELL_FAILED:
+  en-US: "Failed to enable AutoRestartShell in registry: %{registry_path}"
+  zh-CN: "在注册表中启用 AutoRestartShell 失败: %{registry_path}"

@@ -1,7 +1,6 @@
-//! System process manipulation utilities.
+//! Windows desktop shell process manipulation utilities.
 //!
-//! Provides routines to terminate and restart core Windows processes, matching
-//! the implementation found in System Informer (Process Hacker).
+//! Provides routines to terminate and restart core Windows desktop shell processes (Explorer.exe).
 
 use anyhow::{Context, Result, bail};
 use rust_i18n::t;

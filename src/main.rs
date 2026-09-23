@@ -18,8 +18,8 @@ i18n!("locales", fallback = "en-US");
 
 mod app;
 mod config;
+mod desktop;
 mod error;
-mod system;
 mod ui;
 
 /// The outcome of verifying process elevation.

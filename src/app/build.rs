@@ -106,4 +106,14 @@ impl MainWindow {
                 .ok();
         }
     }
+
+    /// Display a modal information message box with an "OK" button.
+    ///
+    /// The dialog is centered on and blocks the main application window until dismissed.
+    pub fn show_info_dialog(&self, title: &str, message: &str) -> AnyResult<()> {
+        self.main_window
+            .hwnd()
+            .MessageBox(message, title, co::MB::OK | co::MB::ICONINFORMATION)?;
+        Ok(())
+    }
 }

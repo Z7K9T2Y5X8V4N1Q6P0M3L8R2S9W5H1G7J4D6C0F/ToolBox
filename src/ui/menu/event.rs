@@ -12,7 +12,7 @@ use winsafe::{
 use crate::{
     app::{MainWindow, UserConfirmationOutcome},
     config::{AppConfig, AppLanguage},
-    system,
+    desktop,
 };
 
 use super::state::{
@@ -40,7 +40,7 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
                 return Ok(());
             }
 
-            if let Err(restart_error) = system::restart_desktop_shell() {
+            if let Err(restart_error) = desktop::restart_desktop_shell() {
                 cloned_main_window_for_restart_explorer
                     .post_deferred_error(restart_error.to_string());
             }
@@ -49,10 +49,35 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         },
     );
 
-    main_window_instance
-        .main_window
-        .on()
-        .wm_command_acc_menu(IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT, move || Ok(()));
+    let cloned_main_window_for_repair_styles = main_window_instance.clone();
+    main_window_instance.main_window.on().wm_command_acc_menu(
+        IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
+        move || {
+            let confirmation = cloned_main_window_for_repair_styles.prompt_confirmation(
+                &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
+                &t!("CONFIRM_REPAIR_VISUAL_STYLES_MESSAGE"),
+            )?;
+
+            if confirmation != UserConfirmationOutcome::Confirmed {
+                return Ok(());
+            }
+
+            match desktop::theme::apply_default_metrics() {
+                Ok(()) => {
+                    cloned_main_window_for_repair_styles.show_info_dialog(
+                        &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
+                        &t!("REPAIR_VISUAL_STYLES_SUCCESS"),
+                    )?;
+                }
+                Err(repair_error) => {
+                    cloned_main_window_for_repair_styles
+                        .post_deferred_error(repair_error.to_string());
+                }
+            }
+
+            Ok(())
+        },
+    );
 
     main_window_instance.main_window.on().wm_command_acc_menu(
         IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,

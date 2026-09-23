@@ -302,3 +302,15 @@ ERROR_OPEN_SHELL_PROCESS_FAILED:
 ERROR_TERMINATE_SHELL_PROCESS_FAILED:
   en-US: "Failed to terminate shell process (PID: %{shell_process_id})"
   zh-CN: "终止外壳进程（PID: %{shell_process_id}）失败"
+
+CONFIRM_REPAIR_VISUAL_STYLES_MESSAGE:
+  en-US: "This action will restore default Windows 10 window metrics, fonts, and color appearance to resolve visual anomalies (such as distorted title bars, broken control sizing, and incorrect colors)\n\nThis action cannot be undone. Do you want to continue?"
+  zh-CN: "此操作将恢复 Windows 10 默认的窗口度量、字体与配色方案，以解决显示异常 (如标题栏高度失常、控件及字体尺寸失调、窗口配色错误等问题)\n\n此操作不可逆，是否继续？"
+
+REPAIR_VISUAL_STYLES_SUCCESS:
+  en-US: "Default visual styles have been restored successfully\nPlease sign out or restart your system for the changes to take full effect"
+  zh-CN: "视觉样式已成功恢复为默认设置\n请注销或重启系统以使其完全生效"
+
+ERROR_FAILED_TO_RESOLVE_USER_SID:
+  en-US: "Failed to resolve active user SID from session token"
+  zh-CN: "无法从会话令牌解析当前用户的 SID"

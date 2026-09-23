@@ -18,11 +18,12 @@
 use std::{ffi::OsString, fs, os::windows::ffi::OsStringExt, path::PathBuf};
 
 use anyhow::{Context, Result};
+use elevate_ti::ProcessToken;
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use windows::{
     Win32::{
-        Foundation::{CloseHandle, HANDLE},
+        Foundation::HANDLE,
         System::{
             Com::CoTaskMemFree,
             RemoteDesktop::{ProcessIdToSessionId, WTSQueryUserToken},
@@ -90,8 +91,8 @@ impl AppConfig {
     /// Resolve the Roaming AppData directory corresponding to the logged-in interactive user.
     fn resolve_active_user_appdata_dir() -> Option<PathBuf> {
         let current_session_id = fetch_current_process_session_id()?;
-        let user_token_guard = query_session_user_token(current_session_id)?;
-        fetch_roaming_appdata_by_token(user_token_guard.as_raw())
+        let user_token = query_session_user_token(current_session_id)?;
+        fetch_roaming_appdata_by_token(user_token.raw())
     }
 
     /// Load the config from disk, handling all error cases gracefully.
@@ -211,46 +212,18 @@ impl AppConfig {
 // Active User Session Path Helpers
 // ---------------------------------------------------------------------------
 
-/// RAII guard for a Win32 [`HANDLE`] ensuring automatic closure on drop.
-struct HandleGuard {
-    raw_handle: HANDLE,
-}
-
-impl HandleGuard {
-    /// Create a new handle guard wrapper.
-    fn new(raw_handle: HANDLE) -> Self {
-        Self { raw_handle }
-    }
-
-    /// Access the underlying raw Win32 [`HANDLE`].
-    fn as_raw(&self) -> HANDLE {
-        self.raw_handle
-    }
-}
-
-impl Drop for HandleGuard {
-    fn drop(&mut self) {
-        if !self.raw_handle.is_invalid() {
-            unsafe {
-                let _ = CloseHandle(self.raw_handle);
-            }
-        }
-    }
-}
-
 /// RAII guard for a COM-allocated [`PWSTR`] buffer ensuring memory is freed on drop.
 struct CoTaskMemGuard {
     raw_pwstr: PWSTR,
 }
 
 impl CoTaskMemGuard {
-    /// Create a new COM task memory guard wrapper.
-    fn new(raw_pwstr: PWSTR) -> Self {
+    const fn new(raw_pwstr: PWSTR) -> Self {
         Self { raw_pwstr }
     }
 
     /// Directly convert the UTF-16 buffer to a native Windows [`PathBuf`].
-    fn to_path_buf(&self) -> PathBuf {
+    fn into_path_buf(self) -> PathBuf {
         let utf16_slice = unsafe { self.raw_pwstr.as_wide() };
         PathBuf::from(OsString::from_wide(utf16_slice))
     }
@@ -280,12 +253,12 @@ fn fetch_current_process_session_id() -> Option<u32> {
 }
 
 /// Acquire the primary user token associated with the given session ID.
-fn query_session_user_token(session_id: u32) -> Option<HandleGuard> {
+fn query_session_user_token(session_id: u32) -> Option<ProcessToken> {
     let mut user_token = HANDLE::default();
     let query_token_result = unsafe { WTSQueryUserToken(session_id, &mut user_token) };
 
     if query_token_result.is_ok() && !user_token.is_invalid() {
-        Some(HandleGuard::new(user_token))
+        Some(ProcessToken::from_raw_handle(user_token))
     } else {
         None
     }
@@ -302,5 +275,5 @@ fn fetch_roaming_appdata_by_token(user_token: HANDLE) -> Option<PathBuf> {
     };
 
     let memory_guard = CoTaskMemGuard::new(path_pwstr);
-    Some(memory_guard.to_path_buf())
+    Some(memory_guard.into_path_buf())
 }

@@ -5,8 +5,6 @@
 //! the active interactive desktop session's user token to obtain the true session user's
 //! Security Identifier (SID) and locate their corresponding hive in `HKEY_USERS`.
 
-use std::ffi::c_void;
-
 use anyhow::{Context, Result, bail};
 use rust_i18n::t;
 use windows::{
@@ -50,15 +48,15 @@ impl Drop for HandleGuard {
 }
 
 /// RAII guard for local security memory allocated by Win32 security APIs.
-struct LocalMemoryGuard {
-    pointer: *mut c_void,
+struct LocalAllocatedStringGuard {
+    ptr: PWSTR,
 }
 
-impl Drop for LocalMemoryGuard {
+impl Drop for LocalAllocatedStringGuard {
     fn drop(&mut self) {
-        if !self.pointer.is_null() {
+        if !self.ptr.is_null() {
             unsafe {
-                let _ = LocalFree(HLOCAL(self.pointer));
+                let _ = LocalFree(HLOCAL(self.ptr.0.cast()));
             }
         }
     }
@@ -106,9 +104,7 @@ pub fn resolve_active_user_sid() -> Result<String> {
             .context("Failed to convert binary SID to string representation")?;
     }
 
-    let _local_guard = LocalMemoryGuard {
-        pointer: sid_pwstr.0.cast(),
-    };
+    let _local_allocated_string_guard = LocalAllocatedStringGuard { ptr: sid_pwstr };
 
     let user_sid = unsafe {
         sid_pwstr

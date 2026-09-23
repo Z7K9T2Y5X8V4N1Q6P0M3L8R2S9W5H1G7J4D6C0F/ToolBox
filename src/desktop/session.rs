@@ -95,21 +95,28 @@ fn convert_sid_to_string(binary_sid: PSID) -> Result<String> {
     LocalAllocatedStringGuard::new(sid_pwstr).into_string()
 }
 
-/// Resolve the active desktop session's user SID string (e.g. `"S-1-5-21-..."`).
-pub fn resolve_active_user_sid() -> Result<String> {
+/// Query the terminal services session identifier for the current process.
+fn fetch_current_session_id() -> Result<u32> {
     let mut session_id = 0;
     unsafe {
         ProcessIdToSessionId(GetCurrentProcessId(), &mut session_id)
             .context(t!("ERROR_GET_PROCESS_SESSION_ID_FAILED"))?;
     }
+    Ok(session_id)
+}
 
+/// Query the primary interactive user token for a given session ID.
+fn fetch_session_user_token(session_id: u32) -> Result<HandleGuard> {
     let mut user_token = HANDLE::default();
     unsafe {
         WTSQueryUserToken(session_id, &mut user_token)
             .context(t!("ERROR_QUERY_USER_TOKEN_FAILED"))?;
     }
-    let token_guard = HandleGuard::new(user_token);
+    Ok(HandleGuard::new(user_token))
+}
 
+/// Query and extract the binary SID representation from a user token.
+fn extract_user_sid_from_token(token_guard: &HandleGuard) -> Result<String> {
     let mut return_length = 0;
     let _ = unsafe {
         GetTokenInformation(token_guard.as_raw(), TokenUser, None, 0, &mut return_length)
@@ -132,6 +139,13 @@ pub fn resolve_active_user_sid() -> Result<String> {
 
     let token_user = unsafe { &*(token_buffer.as_ptr().cast::<TOKEN_USER>()) };
     convert_sid_to_string(token_user.User.Sid)
+}
+
+/// Resolve the active desktop session's user SID string (e.g. `"S-1-5-21-..."`).
+pub fn resolve_active_user_sid() -> Result<String> {
+    let session_id = fetch_current_session_id()?;
+    let token_guard = fetch_session_user_token(session_id)?;
+    extract_user_sid_from_token(&token_guard)
 }
 
 /// Open the root `HKEY_USERS\<Active-User-SID>` registry key for the current interactive user.

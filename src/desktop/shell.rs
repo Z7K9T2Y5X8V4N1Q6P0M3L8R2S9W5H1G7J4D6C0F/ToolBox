@@ -16,12 +16,10 @@ struct ProcessHandleGuard {
 }
 
 impl ProcessHandleGuard {
-    /// Wrap a valid process handle.
     fn new(process_handle: HANDLE) -> Self {
         Self { process_handle }
     }
 
-    /// Access the underlying raw process handle.
     fn as_raw(&self) -> HANDLE {
         self.process_handle
     }
@@ -37,7 +35,7 @@ impl Drop for ProcessHandleGuard {
     }
 }
 
-/// Restart the Windows desktop shell (Explorer.exe) matching [System Informer]'s logic
+/// Restart the Windows desktop shell (Explorer.exe) matching [System Informer]'s logic.
 ///
 /// # Operational Behavior
 /// Identifies the process owning the primary desktop shell window (`GetShellWindow`),
@@ -54,6 +52,13 @@ impl Drop for ProcessHandleGuard {
 /// - The target process cannot be opened with termination rights.
 /// - The process termination request fails.
 pub fn restart_desktop_shell() -> Result<()> {
+    let shell_process_id = query_shell_process_id()?;
+    terminate_process_by_id(shell_process_id)?;
+    Ok(())
+}
+
+/// Query the process identifier owning the active desktop shell window.
+fn query_shell_process_id() -> Result<u32> {
     let shell_window_hwnd = unsafe { GetShellWindow() };
     if shell_window_hwnd.0.is_null() {
         bail!("{}", t!("ERROR_DESKTOP_SHELL_WINDOW_NOT_FOUND"));
@@ -62,15 +67,21 @@ pub fn restart_desktop_shell() -> Result<()> {
     let mut shell_process_id = 0;
     let window_thread_id =
         unsafe { GetWindowThreadProcessId(shell_window_hwnd, Some(&mut shell_process_id)) };
+
     if window_thread_id == 0 || shell_process_id == 0 {
         bail!("{}", t!("ERROR_QUERY_SHELL_CLIENT_ID_FAILED"));
     }
 
-    let process_handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, shell_process_id) }
+    Ok(shell_process_id)
+}
+
+/// Terminate the target process using `PROCESS_TERMINATE` access rights.
+fn terminate_process_by_id(process_id: u32) -> Result<()> {
+    let process_handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, process_id) }
         .with_context(|| {
             t!(
                 "ERROR_OPEN_SHELL_PROCESS_FAILED",
-                shell_process_id = shell_process_id
+                shell_process_id = process_id
             )
         })?;
     let process_guard = ProcessHandleGuard::new(process_handle);
@@ -79,7 +90,7 @@ pub fn restart_desktop_shell() -> Result<()> {
         TerminateProcess(process_guard.as_raw(), 0).with_context(|| {
             t!(
                 "ERROR_TERMINATE_SHELL_PROCESS_FAILED",
-                shell_process_id = shell_process_id
+                shell_process_id = process_id
             )
         })?;
     }

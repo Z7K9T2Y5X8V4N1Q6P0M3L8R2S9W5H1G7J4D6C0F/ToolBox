@@ -17,6 +17,7 @@ dependencies = [
  "serde",
  "sys-locale",
  "sysinfo",
+ "thiserror",
  "toml 1.1.6+spec-1.1.0",
  "windows 0.58.0",
  "winreg 0.56.0",

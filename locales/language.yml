@@ -314,3 +314,39 @@ REPAIR_VISUAL_STYLES_SUCCESS:
 ERROR_FAILED_TO_RESOLVE_USER_SID:
   en-US: "Failed to resolve active user SID from session token"
   zh-CN: "无法从会话令牌解析当前用户的 SID"
+
+ERROR_GET_PROCESS_SESSION_ID_FAILED:
+  en-US: "Failed to obtain current process session ID"
+  zh-CN: "获取当前进程的会话 ID 失败"
+
+ERROR_QUERY_USER_TOKEN_FAILED:
+  en-US: "Failed to query user token for active desktop session"
+  zh-CN: "查询当前活动桌面会话的用户令牌失败"
+
+ERROR_GET_TOKEN_USER_FAILED:
+  en-US: "Failed to get token user information"
+  zh-CN: "获取令牌用户信息失败"
+
+ERROR_CONVERT_SID_TO_STRING_FAILED:
+  en-US: "Failed to convert binary SID to string representation"
+  zh-CN: "将二进制 SID 转换为字符串格式失败"
+
+ERROR_NULL_STRING_POINTER:
+  en-US: "Attempted to read from a null string pointer"
+  zh-CN: "尝试从空字符串指针中读取内容"
+
+ERROR_INVALID_UTF16_SID:
+  en-US: "Invalid UTF-16 sequence in SID string"
+  zh-CN: "SID 字符串中包含无效的 UTF-16 编码序列"
+
+ERROR_OPEN_USER_REGISTRY_ROOT_FAILED:
+  en-US: "Failed to open registry root for user SID: %{user_sid}"
+  zh-CN: "打开用户 SID 对应的注册表根项失败: %{user_sid}"
+
+ERROR_REGISTRY_OPEN_CREATE_KEY_FAILED:
+  en-US: "Failed to open or create registry subkey: %{subkey_path}"
+  zh-CN: "打开或创建注册表子项失败: %{subkey_path}"
+
+ERROR_REGISTRY_SET_VALUE_FAILED:
+  en-US: "Failed to write registry value: %{value_name}"
+  zh-CN: "写入注册表键值失败: %{value_name}"

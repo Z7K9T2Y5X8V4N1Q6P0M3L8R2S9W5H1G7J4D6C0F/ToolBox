@@ -21,7 +21,6 @@ pub struct WindowVisualStylesPage {
     tab_page: gui::TabPage,
     edit: gui::Edit,
     listview: gui::ListView,
-    process_manager: Rc<RefCell<ProcessManager>>,
 }
 
 impl From<WindowVisualStylesPage> for gui::TabPage {
@@ -58,7 +57,6 @@ impl WindowVisualStylesPage {
             tab_page,
             edit,
             listview,
-            process_manager,
         }
     }
 

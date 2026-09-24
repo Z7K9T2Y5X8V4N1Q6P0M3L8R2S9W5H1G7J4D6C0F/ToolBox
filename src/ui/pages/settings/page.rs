@@ -19,8 +19,6 @@ use super::{CheckboxId, build, event};
 pub struct SettingsPage {
     tab_page: gui::TabPage,
     group_box: gui::Button,
-    scrollable_panel: gui::WindowControl,
-    content_panel: gui::WindowControl,
     checkboxes: Vec<(CheckboxId, gui::Button)>,
     button_select_all_toggle: gui::Button,
     button_apply: gui::Button,
@@ -60,8 +58,6 @@ impl SettingsPage {
         Self {
             tab_page,
             group_box,
-            scrollable_panel,
-            content_panel,
             checkboxes,
             button_select_all_toggle,
             button_apply,

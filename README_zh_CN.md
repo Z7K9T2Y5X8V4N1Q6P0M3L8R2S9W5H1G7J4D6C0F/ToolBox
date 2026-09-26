@@ -46,11 +46,13 @@
   - 你也可以搭配 [高级外观设置](https://github.com/leetftw/SimpleClassicTheme/blob/master/SimpleClassicTheme/Resources/deskn.cpl) 使用
 
 - 菜单项
-  - 修复主题样式
-  - 恢复默认经典主题样式
-  - 恢复默认经典主题样式
+  - 重启文件资源管理器
+  - 修复视觉样式至默认
+  - 恢复默认经典视觉样式
+  - 添加额外经典视觉样式
   - 全局基本样式切换
   - 全局经典样式切换
+  
 
 
 ### 构建依赖

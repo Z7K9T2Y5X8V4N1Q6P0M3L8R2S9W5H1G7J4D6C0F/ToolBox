@@ -45,11 +45,13 @@ A Windows System Utilities Toolbox Demo, Built purely with Windows API, ensuring
   - Can be used in conjunction with [Advanced Appearance Settings](https://github.com/leetftw/SimpleClassicTheme/blob/master/SimpleClassicTheme/Resources/deskn.cpl)
 
 - Menu Actions
-  - Repair theme styles
-  - Restore default classic theme style
-  - Add extra classic theme styles
-  - Global Basic style toggle
-  - Global Classic style toggle
+  - Restart File Explorer
+  - Repair Visual Styles to Default
+  - Restore Default Classic Visual Styles
+  - Add Extra Classic Visual Styles
+  - Toggle Global Basic Styles
+  - Toggle Global Classic Styles
+  
 
 
 ### Built with

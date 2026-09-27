@@ -1,6 +1,6 @@
 <div align="center">
 
-# ToolBox
+# <img src="./resources/launcher.ico" height="38"> ToolBox
 
 <p align="center">
   <strong>A lightweight, pure Win32 API Windows System Utilities Toolbox Demo.</strong>

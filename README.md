@@ -6,10 +6,8 @@
   <strong>A lightweight, pure Win32 API Windows System Utilities Toolbox Demo.</strong>
 </p>
 
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?style=flat-square&logo=windows)](https://microsoft.com)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows)](https://microsoft.com)
 [![Rust](https://img.shields.io/badge/Language-Rust-dea584?style=flat-square&logo=rust)](https://rust-lang.org)
-[![Memory](https://img.shields.io/badge/Memory-Minimal%20Footprint-success?style=flat-square)](#description)
-[![Dependencies](https://img.shields.io/badge/Dependencies-Zero-informational?style=flat-square)](#usage)
 
 </div>
 

@@ -15,10 +15,10 @@ pub const DEFAULT_YAHEI_FONT_BYTES: [u8; 92] = [
 ];
 
 /// String key-value pairs to write under `Control Panel\Appearance`.
-pub const APPEARANCE_ENTRIES: [(&str, &str); 2] = [("Current", ""), ("NewCurrent", "")];
+pub const APPEARANCE_ENTRIES: &[(&str, &str)] = &[("Current", ""), ("NewCurrent", "")];
 
 /// System colors to write under `Control Panel\Colors`.
-pub const COLOR_ENTRIES: [(&str, &str); 32] = [
+pub const COLOR_ENTRIES: &[(&str, &str)] = &[
     ("ActiveBorder", "180 180 180"),
     ("ActiveTitle", "153 180 209"),
     ("AppWorkspace", "171 171 171"),
@@ -54,7 +54,7 @@ pub const COLOR_ENTRIES: [(&str, &str); 32] = [
 ];
 
 /// Metrics string values under `Control Panel\Desktop\WindowMetrics`.
-pub const WINDOW_METRICS_STRING_ENTRIES: [(&str, &str); 15] = [
+pub const WINDOW_METRICS_STRING_ENTRIES: &[(&str, &str)] = &[
     ("BorderWidth", "-15"),
     ("CaptionHeight", "-330"),
     ("CaptionWidth", "-330"),
@@ -73,7 +73,7 @@ pub const WINDOW_METRICS_STRING_ENTRIES: [(&str, &str); 15] = [
 ];
 
 /// Names of binary font metrics under `Control Panel\Desktop\WindowMetrics`.
-pub const WINDOW_METRICS_BINARY_FONT_KEYS: [&str; 6] = [
+pub const WINDOW_METRICS_BINARY_FONT_KEYS: &[&str] = &[
     "CaptionFont",
     "IconFont",
     "MenuFont",

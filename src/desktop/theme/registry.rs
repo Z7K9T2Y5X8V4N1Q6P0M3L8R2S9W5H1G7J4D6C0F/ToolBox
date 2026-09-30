@@ -36,10 +36,6 @@ pub fn apply_default_metrics() -> Result<()> {
         &metrics::default_font_reg_value(),
     )?;
 
-    window_metrics_key
-        .set_value("AppliedDPI", &metrics::APPLIED_DPI_VALUE)
-        .with_context(|| t!("ERROR_REGISTRY_SET_VALUE_FAILED", value_name = "AppliedDPI"))?;
-
     Ok(())
 }
 

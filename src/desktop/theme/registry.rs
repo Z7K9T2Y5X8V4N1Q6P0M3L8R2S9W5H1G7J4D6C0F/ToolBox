@@ -32,7 +32,7 @@ pub fn apply_default_metrics() -> Result<()> {
     write_string_entries(&window_metrics_key, &metrics::WINDOW_METRICS_STRING_ENTRIES)?;
     write_uniform_raw_entries(
         &window_metrics_key,
-        &metrics::WINDOW_METRICS_BINARY_FONT_KEYS,
+        metrics::WINDOW_METRICS_BINARY_FONT_KEYS,
         &metrics::default_font_reg_value(),
     )?;
 

@@ -18,7 +18,7 @@ use windows::Win32::{
 use winreg::{RegKey, enums::HKEY_USERS};
 
 /// Query the terminal services session identifier for the current process.
-fn fetch_current_session_id() -> Result<u32> {
+pub fn fetch_current_session_id() -> Result<u32> {
     let mut session_id = 0;
     unsafe {
         ProcessIdToSessionId(GetCurrentProcessId(), &mut session_id)
@@ -37,10 +37,15 @@ fn fetch_session_user_token(session_id: u32) -> Result<ProcessToken> {
     Ok(ProcessToken::from_raw_handle(user_token))
 }
 
+/// Acquire the primary user token associated with the current interactive desktop session.
+pub fn fetch_active_user_token() -> Result<ProcessToken> {
+    let current_session_id = fetch_current_session_id()?;
+    fetch_session_user_token(current_session_id)
+}
+
 /// Resolve the active desktop session's user SID string (e.g. `"S-1-5-21-..."`).
 pub fn resolve_active_user_sid() -> Result<String> {
-    let session_id = fetch_current_session_id()?;
-    let user_token = fetch_session_user_token(session_id)?;
+    let user_token = fetch_active_user_token()?;
     user_token
         .query_user_sid_string()
         .context(t!("ERROR_FAILED_TO_RESOLVE_USER_SID"))

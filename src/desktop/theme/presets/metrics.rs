@@ -124,7 +124,7 @@ fn copy_face_name(destination_buffer: &mut [u16; 32], font_name: &str) {
     // Leave at least the final element zeroed for null-termination.
     let writable_destination = destination_buffer
         .split_last_mut()
-        .map(|(_, prefix)| prefix);
+        .map(|(_, prefix_slice)| prefix_slice);
 
     if let Some(destination_slice) = writable_destination {
         for (destination_cell, source_unit) in destination_slice.iter_mut().zip(utf16_units) {

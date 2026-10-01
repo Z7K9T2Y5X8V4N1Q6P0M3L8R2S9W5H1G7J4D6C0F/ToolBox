@@ -76,6 +76,9 @@ pub const WINDOW_METRICS_BINARY_FONT_KEYS: &[&str] = &[
     "StatusFont",
 ];
 
+/// Applied DPI integer value under `Control Panel\Desktop\WindowMetrics`.
+pub const APPLIED_DPI_VALUE: u32 = 0x0000_0060;
+
 /// Return the binary RegValue for the default Microsoft YaHei UI font.
 ///
 /// Encapsulates the GDI logical font specification into an owned binary payload

@@ -295,6 +295,14 @@ ERROR_QUERY_SHELL_CLIENT_ID_FAILED:
   en-US: "Failed to query client ID from desktop shell window"
   zh-CN: "从桌面外壳窗口查询客户端 ID 失败"
 
+ERROR_DUPLICATE_TOKEN_FAILED:
+  en-US: "Failed to duplicate user token"
+  zh-CN: "复制用户令牌失败"
+
+ERROR_SPAWN_SHELL_PROCESS_FAILED:
+  en-US: "Failed to spawn shell process as interactive user"
+  zh-CN: "以交互式用户身份启动 Shell 进程失败"
+
 ERROR_OPEN_SHELL_PROCESS_FAILED:
   en-US: "Failed to open shell process (PID: %{shell_process_id}) with PROCESS_TERMINATE"
   zh-CN: "使用 PROCESS_TERMINATE 权限打开外壳进程（PID: %{shell_process_id}）失败"

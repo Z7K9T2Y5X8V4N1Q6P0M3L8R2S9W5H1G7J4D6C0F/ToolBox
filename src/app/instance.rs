@@ -69,8 +69,8 @@ pub fn check_single_instance() -> SingleInstanceStatus {
         signal_existing_instance();
         SingleInstanceStatus::AlreadyRunning
     } else {
-        let single_instance_mutex_guard = SingleInstanceGuard { mutex_handle };
-        SingleInstanceStatus::Primary(single_instance_mutex_guard)
+        let single_instance_guard = SingleInstanceGuard { mutex_handle };
+        SingleInstanceStatus::Primary(single_instance_guard)
     }
 }
 

@@ -343,10 +343,6 @@ ERROR_OPEN_USER_REGISTRY_ROOT_FAILED:
   en-US: "Failed to open registry root for user SID: %{user_sid}"
   zh-CN: "打开用户 SID 对应的注册表根项失败: %{user_sid}"
 
-ERROR_REGISTRY_OPEN_CREATE_KEY_FAILED:
-  en-US: "Failed to open or create registry subkey: %{subkey_path}"
-  zh-CN: "打开或创建注册表子项失败: %{subkey_path}"
-
 ERROR_REGISTRY_SET_VALUE_FAILED:
   en-US: "Failed to write registry value: %{value_name}"
   zh-CN: "写入注册表键值失败: %{value_name}"
@@ -358,3 +354,51 @@ ERROR_OPEN_WINLOGON_KEY_FAILED:
 ERROR_SET_AUTORESTARTSHELL_FAILED:
   en-US: "Failed to enable AutoRestartShell in registry: %{registry_path}"
   zh-CN: "在注册表中启用 AutoRestartShell 失败: %{registry_path}"
+
+ERROR_DEFAULT_HIVE_NOT_FOUND:
+  en-US: "Default user profile was not found at: %{path}"
+  zh-CN: "未找到默认用户配置文件：%{path}"
+
+ERROR_MOUNT_DEFAULT_HIVE_FAILED:
+  en-US: "Failed to load default user registry hive (%{path})"
+  zh-CN: "加载默认用户注册表配置（%{path}）失败"
+
+ERROR_OPEN_MOUNTED_HIVE_FAILED:
+  en-US: "Failed to open mounted temporary registry key"
+  zh-CN: "打开已挂载的注册表配置项失败"
+
+ERROR_REGISTRY_ENUM_VALUES_FAILED:
+  en-US: "Failed to enumerate registry values under %{subkey_path}"
+  zh-CN: "遍历注册表项 %{subkey_path} 下的键值时发生错误"
+
+ERROR_RESOLVE_DEFAULT_PROFILE_PATH_FAILED:
+  en-US: "Failed to resolve system default user profile directory"
+  zh-CN: "无法解析系统的默认用户文件夹路径"
+
+ERROR_OPEN_PROFILE_LIST_KEY_FAILED:
+  en-US: "Failed to open system ProfileList registry key"
+  zh-CN: "打开系统 ProfileList 注册表配置项失败"
+
+ERROR_READ_DEFAULT_PROFILE_VALUE_FAILED:
+  en-US: "Failed to read default user profile registry value"
+  zh-CN: "读取默认用户配置路径键值失败"
+
+ERROR_REGISTRY_DELETE_VALUE_FAILED:
+  en-US: "Failed to delete registry value: %{value_name}"
+  zh-CN: "删除注册表键值 %{value_name} 失败"
+
+ERROR_ENABLE_REGISTRY_PRIVILEGES_FAILED:
+  en-US: "Failed to enable required registry privileges (SeBackupPrivilege or SeRestorePrivilege)"
+  zh-CN: "启用所需的注册表特权（SeBackupPrivilege 或 SeRestorePrivilege）失败"
+
+WARN_UNLOAD_DEFAULT_HIVE_FAILED:
+  en-US: "Failed to unload temporary registry hive: %{subkey}\nerror: %{error}"
+  zh-CN: "卸载临时注册表配置项失败: %{subkey}\n错误: %{error}"
+
+ERROR_OPEN_DEFAULT_HIVE_SUBKEY_FAILED:
+  en-US: "Failed to open required default template registry branch: %{subkey_path}"
+  zh-CN: "打开默认模板注册表必须分支失败：%{subkey_path}"
+
+ERROR_OPEN_ACTIVE_USER_SUBKEY_FAILED:
+  en-US: "Failed to open active user registry branch: %{subkey_path}"
+  zh-CN: "打开当前用户注册表必须分支失败：%{subkey_path}"

@@ -209,10 +209,10 @@ fn terminate_process_by_id(process_id: u32) -> Result<()> {
                 shell_process_id = process_id
             )
         })?;
-    let process_guard = ProcessHandleGuard::new(process_handle);
+    let process_handle_guard = ProcessHandleGuard::new(process_handle);
 
     unsafe {
-        TerminateProcess(process_guard.as_raw(), 0).with_context(|| {
+        TerminateProcess(process_handle_guard.as_raw(), 0).with_context(|| {
             t!(
                 "ERROR_TERMINATE_SHELL_PROCESS_FAILED",
                 shell_process_id = process_id

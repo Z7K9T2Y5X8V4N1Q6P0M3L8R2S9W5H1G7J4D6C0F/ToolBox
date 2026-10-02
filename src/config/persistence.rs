@@ -15,24 +15,20 @@
 //!   the default config is written over the corrupt file, and returned.
 //! - If the file exists and parses successfully, it is returned as-is.
 
-use std::{ffi::OsString, fs, os::windows::ffi::OsStringExt, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use elevate_ti::ProcessToken;
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
-use windows::{
-    Win32::{
-        Foundation::HANDLE,
-        System::{
-            Com::CoTaskMemFree,
-            RemoteDesktop::{ProcessIdToSessionId, WTSQueryUserToken},
-            Threading::GetCurrentProcessId,
-        },
-        UI::Shell::{FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG, SHGetKnownFolderPath},
+use windows::Win32::{
+    Foundation::HANDLE,
+    System::{
+        RemoteDesktop::{ProcessIdToSessionId, WTSQueryUserToken},
+        Threading::GetCurrentProcessId,
     },
-    core::PWSTR,
 };
+use winsafe::{HACCESSTOKEN, co};
 
 use crate::error;
 
@@ -212,33 +208,6 @@ impl AppConfig {
 // Active User Session Path Helpers
 // ---------------------------------------------------------------------------
 
-/// RAII guard for a COM-allocated [`PWSTR`] buffer ensuring memory is freed on drop.
-struct CoTaskMemGuard {
-    raw_pwstr: PWSTR,
-}
-
-impl CoTaskMemGuard {
-    const fn new(raw_pwstr: PWSTR) -> Self {
-        Self { raw_pwstr }
-    }
-
-    /// Directly convert the UTF-16 buffer to a native Windows [`PathBuf`].
-    fn into_path_buf(self) -> PathBuf {
-        let utf16_slice = unsafe { self.raw_pwstr.as_wide() };
-        PathBuf::from(OsString::from_wide(utf16_slice))
-    }
-}
-
-impl Drop for CoTaskMemGuard {
-    fn drop(&mut self) {
-        if !self.raw_pwstr.is_null() {
-            unsafe {
-                CoTaskMemFree(Some(self.raw_pwstr.0.cast()));
-            }
-        }
-    }
-}
-
 /// Retrieve the session identifier of the current GUI process.
 fn fetch_current_process_session_id() -> Option<u32> {
     let mut current_process_session_id = 0;
@@ -264,16 +233,15 @@ fn query_session_user_token(session_id: u32) -> Option<ProcessToken> {
     }
 }
 
-/// Query the roaming AppData path for the user identified by the specified token.
+/// Query the roaming AppData path for the user identified by the specified token using [`winsafe::SHGetKnownFolderPath`].
 fn fetch_roaming_appdata_by_token(user_token: HANDLE) -> Option<PathBuf> {
-    let folder_path_result =
-        unsafe { SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG(0), user_token) };
+    let token_borrow = unsafe { HACCESSTOKEN::from_ptr(user_token.0) };
 
-    let path_pwstr = match folder_path_result {
-        Ok(path_pwstr) if !path_pwstr.is_null() => path_pwstr,
-        _ => return None,
-    };
-
-    let memory_guard = CoTaskMemGuard::new(path_pwstr);
-    Some(memory_guard.into_path_buf())
+    winsafe::SHGetKnownFolderPath(
+        &co::KNOWNFOLDERID::RoamingAppData,
+        co::KF::DEFAULT,
+        Some(&token_borrow),
+    )
+    .ok()
+    .map(PathBuf::from)
 }

@@ -30,7 +30,7 @@ features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win
 
 [dependencies.winsafe]
 version = "0.0.29"
-features = ["gui"]
+features = ["advapi", "gui", "shell"]
 
 [build-dependencies]
 embed-manifest = "1.5.0"

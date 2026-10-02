@@ -28,7 +28,7 @@ use windows::Win32::{
         Threading::GetCurrentProcessId,
     },
 };
-use winsafe::{HACCESSTOKEN, co};
+use winsafe::{HACCESSTOKEN, SHGetKnownFolderPath, co};
 
 use crate::error;
 
@@ -237,7 +237,7 @@ fn query_session_user_token(session_id: u32) -> Option<ProcessToken> {
 fn fetch_roaming_appdata_by_token(user_token: HANDLE) -> Option<PathBuf> {
     let token_borrow = unsafe { HACCESSTOKEN::from_ptr(user_token.0) };
 
-    winsafe::SHGetKnownFolderPath(
+    SHGetKnownFolderPath(
         &co::KNOWNFOLDERID::RoamingAppData,
         co::KF::DEFAULT,
         Some(&token_borrow),

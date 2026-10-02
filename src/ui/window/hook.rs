@@ -14,6 +14,7 @@
 //! The hook must be installed before any window is created so it can intercept
 //! their `WM_CREATE` messages.
 
+use rust_i18n::t;
 use std::ptr;
 use windows::{
     Win32::{
@@ -79,6 +80,6 @@ pub fn install_ui_customization_hook() {
             None,
             GetCurrentThreadId(),
         )
-        .expect("INSTALL_UI_CUSTOMIZATION_HOOK_FAILED");
+        .expect(&t!("INSTALL_UI_CUSTOMIZATION_HOOK_FAILED"));
     };
 }

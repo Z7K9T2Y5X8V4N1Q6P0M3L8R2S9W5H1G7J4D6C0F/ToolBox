@@ -7,23 +7,13 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow, bail};
+use elevate_ti::{Privilege, ProcessToken};
 use rust_i18n::t;
-use windows::{
-    Win32::{
-        Foundation::{CloseHandle, HANDLE, LUID},
-        Security::{
-            AdjustTokenPrivileges, LUID_AND_ATTRIBUTES, LookupPrivilegeValueW,
-            SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES, TOKEN_QUERY,
-        },
-        System::Threading::{GetCurrentProcess, OpenProcessToken},
-    },
-    core::{PCWSTR, w},
-};
 use winreg::{
     RegKey,
     enums::{HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_ALL_ACCESS, KEY_READ},
 };
-use winsafe::{ExpandEnvironmentStrings, HKEY, co};
+use winsafe::{ExpandEnvironmentStrings, HKEY, SHGetKnownFolderPath, co};
 
 use crate::desktop::session;
 
@@ -47,12 +37,12 @@ const DEFAULT_PROFILE_VALUE_NAME: &str = "Default";
 
 /// RAII guard ensuring the temporary mounted registry hive is properly unloaded on drop.
 struct LoadedHiveGuard {
-    mount_subkey_name: String,
+    mounted_hive_subkey_name: String,
 }
 
 impl LoadedHiveGuard {
-    /// Mount the offline hive file located at `hive_file_path` under `HKEY_USERS\<mount_subkey_name>`.
-    fn load(mount_subkey_name: &str, hive_file_path: &Path) -> Result<Self> {
+    /// Mount the offline hive file located at `hive_file_path` under `HKEY_USERS\<mounted_hive_subkey_name>`.
+    fn load(mounted_hive_subkey_name: &str, hive_file_path: &Path) -> Result<Self> {
         enable_required_registry_privileges()
             .context(t!("ERROR_ENABLE_REGISTRY_PRIVILEGES_FAILED"))?;
 
@@ -61,23 +51,23 @@ impl LoadedHiveGuard {
             .context(t!("ERROR_RESOLVE_DEFAULT_PROFILE_PATH_FAILED"))?;
 
         HKEY::USERS
-            .RegLoadKey(Some(mount_subkey_name), hive_path_string)
+            .RegLoadKey(Some(mounted_hive_subkey_name), hive_path_string)
             .map_err(|error| anyhow!("{error}"))?;
 
         Ok(Self {
-            mount_subkey_name: mount_subkey_name.to_string(),
+            mounted_hive_subkey_name: mounted_hive_subkey_name.to_string(),
         })
     }
 }
 
 impl Drop for LoadedHiveGuard {
     fn drop(&mut self) {
-        if let Err(unload_error) = HKEY::USERS.RegUnLoadKey(Some(&self.mount_subkey_name)) {
+        if let Err(unload_error) = HKEY::USERS.RegUnLoadKey(Some(&self.mounted_hive_subkey_name)) {
             log::warn!(
                 "{}",
                 t!(
                     "WARN_UNLOAD_DEFAULT_HIVE_FAILED",
-                    subkey = self.mount_subkey_name,
+                    subkey = self.mounted_hive_subkey_name,
                     error = unload_error
                 )
             );
@@ -115,20 +105,20 @@ pub fn apply_default_metrics() -> Result<()> {
                 )
             })?;
 
-    // 2. Open both the mounted hive and the active user registry root
-    let root_users_key = RegKey::predef(HKEY_USERS);
-    let mounted_default_key = root_users_key
+    // 2. Open both the mounted template hive and the active user registry root
+    let users_root_key = RegKey::predef(HKEY_USERS);
+    let mounted_template_root_key = users_root_key
         .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY, KEY_READ)
         .context(t!("ERROR_OPEN_MOUNTED_HIVE_FAILED"))?;
 
-    let active_user_key = session::open_active_user_registry_root()?;
+    let active_user_root_key = session::open_active_user_registry_root()?;
 
-    // 3. Purge existing target keys and clone fresh contents (Scheme A: Full replacement)
-    for target_theme_metrics_branch_path in TARGET_REGISTRY_SUBKEYS {
-        reset_target_metrics_branch_from_default_hive(
-            &mounted_default_key,
-            &active_user_key,
-            target_theme_metrics_branch_path,
+    // 3. Purge existing target keys and clone fresh contents
+    for relative_metrics_subkey_path in TARGET_REGISTRY_SUBKEYS {
+        reset_target_metrics_subkey_from_source_template(
+            &mounted_template_root_key,
+            &active_user_root_key,
+            relative_metrics_subkey_path,
         )?;
     }
 
@@ -136,61 +126,61 @@ pub fn apply_default_metrics() -> Result<()> {
 }
 
 /// Purge existing user configuration and clone fresh metric values from the mounted default user hive.
-fn reset_target_metrics_branch_from_default_hive(
-    mounted_default_user_root_key: &RegKey,
-    active_user_registry_root_key: &RegKey,
-    target_theme_metrics_branch_path: &str,
+fn reset_target_metrics_subkey_from_source_template(
+    mounted_template_root_key: &RegKey,
+    active_user_root_key: &RegKey,
+    relative_metrics_subkey_path: &str,
 ) -> Result<()> {
-    let source_default_metrics_subkey = mounted_default_user_root_key
-        .open_subkey_with_flags(target_theme_metrics_branch_path, KEY_READ)
+    let mounted_template_metrics_subkey = mounted_template_root_key
+        .open_subkey_with_flags(relative_metrics_subkey_path, KEY_READ)
         .with_context(|| {
             t!(
                 "ERROR_OPEN_DEFAULT_HIVE_SUBKEY_FAILED",
-                subkey_path = target_theme_metrics_branch_path
+                subkey_path = relative_metrics_subkey_path
             )
         })?;
 
-    let active_user_metrics_subkey = active_user_registry_root_key
-        .open_subkey_with_flags(target_theme_metrics_branch_path, KEY_ALL_ACCESS)
+    let active_user_metrics_subkey = active_user_root_key
+        .open_subkey_with_flags(relative_metrics_subkey_path, KEY_ALL_ACCESS)
         .with_context(|| {
             t!(
                 "ERROR_OPEN_ACTIVE_USER_SUBKEY_FAILED",
-                subkey_path = target_theme_metrics_branch_path
+                subkey_path = relative_metrics_subkey_path
             )
         })?;
 
-    // Step 1: Collect and delete all existing values under the active user's target branch
-    let old_value_names: Vec<String> = active_user_metrics_subkey
+    // Step 1: Collect and delete all existing values under the target user's metrics subkey
+    let active_user_existing_metrics_value_names: Vec<String> = active_user_metrics_subkey
         .enum_values()
         .filter_map(|enum_result| enum_result.ok().map(|(value_name, _)| value_name))
         .collect();
 
-    for old_value_name in old_value_names {
+    for active_user_existing_metrics_value_name in active_user_existing_metrics_value_names {
         active_user_metrics_subkey
-            .delete_value(&old_value_name)
+            .delete_value(&active_user_existing_metrics_value_name)
             .with_context(|| {
                 t!(
                     "ERROR_REGISTRY_DELETE_VALUE_FAILED",
-                    value_name = old_value_name
+                    value_name = active_user_existing_metrics_value_name
                 )
             })?;
     }
 
-    // Step 2: Clone all pristine values from the default user template branch
-    for enum_result in source_default_metrics_subkey.enum_values() {
-        let (pristine_value_name, pristine_value_data) = enum_result.with_context(|| {
+    // Step 2: Clone all values from the source default template subkey
+    for enum_result in mounted_template_metrics_subkey.enum_values() {
+        let (source_value_name, source_value_data) = enum_result.with_context(|| {
             t!(
                 "ERROR_REGISTRY_ENUM_VALUES_FAILED",
-                subkey_path = target_theme_metrics_branch_path
+                subkey_path = relative_metrics_subkey_path
             )
         })?;
 
         active_user_metrics_subkey
-            .set_raw_value(&pristine_value_name, &pristine_value_data)
+            .set_raw_value(&source_value_name, &source_value_data)
             .with_context(|| {
                 t!(
                     "ERROR_REGISTRY_SET_VALUE_FAILED",
-                    value_name = pristine_value_name
+                    value_name = source_value_name
                 )
             })?;
     }
@@ -200,83 +190,40 @@ fn reset_target_metrics_branch_from_default_hive(
 
 /// Enable `SeBackupPrivilege` and `SeRestorePrivilege` for the current process token.
 fn enable_required_registry_privileges() -> Result<()> {
-    struct TokenHandleGuard(HANDLE);
-    impl Drop for TokenHandleGuard {
-        fn drop(&mut self) {
-            unsafe {
-                let _ = CloseHandle(self.0);
-            }
-        }
-    }
-
-    let mut token_handle = HANDLE::default();
-    unsafe {
-        OpenProcessToken(
-            GetCurrentProcess(),
-            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
-            &mut token_handle,
-        )?;
-    }
-
-    let token_handle_guard = TokenHandleGuard(token_handle);
-
-    for privilege_name in [w!("SeBackupPrivilege"), w!("SeRestorePrivilege")] {
-        enable_single_privilege(token_handle_guard.0, privilege_name)?;
-    }
-
-    Ok(())
-}
-
-/// Enable a single privilege on the specified token.
-fn enable_single_privilege(token_handle: HANDLE, privilege_name: PCWSTR) -> Result<()> {
-    let mut luid = LUID::default();
-    unsafe {
-        LookupPrivilegeValueW(None, privilege_name, &mut luid)?;
-    }
-
-    let token_privileges = TOKEN_PRIVILEGES {
-        PrivilegeCount: 1,
-        Privileges: [LUID_AND_ATTRIBUTES {
-            Luid: luid,
-            Attributes: SE_PRIVILEGE_ENABLED,
-        }],
-    };
-
-    unsafe {
-        AdjustTokenPrivileges(token_handle, false, Some(&token_privileges), 0, None, None)?;
-    }
-
+    let current_token = ProcessToken::current_process()?;
+    current_token.enable_privileges(&[Privilege::Backup, Privilege::Restore])?;
     Ok(())
 }
 
 /// Resolve the absolute path to the default user's `NTUSER.DAT` hive file dynamically.
 fn resolve_default_user_hive_path() -> Result<PathBuf> {
     // 1. Try Windows Known Folder (UserProfiles, e.g. D:\Users)
-    if let Some(user_profiles_dir) = fetch_user_profiles_known_folder() {
-        let candidate_path = user_profiles_dir.join("Default").join("NTUSER.DAT");
-        if candidate_path.exists() {
-            return Ok(candidate_path);
+    if let Some(user_profiles_directory) = fetch_user_profiles_known_folder() {
+        let known_folder_candidate_path =
+            user_profiles_directory.join("Default").join("NTUSER.DAT");
+        if known_folder_candidate_path.exists() {
+            return Ok(known_folder_candidate_path);
         }
     }
 
     // 2. Try HKLM ProfileList registry entry (expanded if contains environment variables)
-    if let Ok(registry_default_path) = query_default_profile_path_from_registry() {
-        let candidate_path = registry_default_path.join("NTUSER.DAT");
-        if candidate_path.exists() {
-            return Ok(candidate_path);
+    if let Ok(registry_default_profile_directory) = query_default_profile_path_from_registry() {
+        let registry_candidate_path = registry_default_profile_directory.join("NTUSER.DAT");
+        if registry_candidate_path.exists() {
+            return Ok(registry_candidate_path);
         }
     }
 
     // 3. Fallback: Dynamically resolve from active %SystemDrive% (never hardcode "C:\")
     if let Some(system_drive) = std::env::var_os("SystemDrive") {
-        let candidate_path = PathBuf::from(system_drive)
+        let system_drive_candidate_path = PathBuf::from(system_drive)
             .join(std::path::MAIN_SEPARATOR_STR)
             .join("Users")
             .join("Default")
             .join("NTUSER.DAT");
 
-        if candidate_path.exists() {
-            return Ok(candidate_path);
+        if system_drive_candidate_path.exists() {
+            return Ok(system_drive_candidate_path);
         }
     }
 
@@ -285,25 +232,25 @@ fn resolve_default_user_hive_path() -> Result<PathBuf> {
 
 /// Query the path to the user profiles root directory using [`winsafe::SHGetKnownFolderPath`].
 fn fetch_user_profiles_known_folder() -> Option<PathBuf> {
-    winsafe::SHGetKnownFolderPath(&co::KNOWNFOLDERID::UserProfiles, co::KF::DEFAULT, None)
+    SHGetKnownFolderPath(&co::KNOWNFOLDERID::UserProfiles, co::KF::DEFAULT, None)
         .ok()
         .map(PathBuf::from)
 }
 
 /// Query the default user profile path configured under `ProfileList` in HKLM.
 fn query_default_profile_path_from_registry() -> Result<PathBuf> {
-    let local_machine_root = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let profile_list_key = local_machine_root
+    let local_machine_root_key = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let profile_list_key = local_machine_root_key
         .open_subkey_with_flags(PROFILE_LIST_REGISTRY_PATH, KEY_READ)
         .context(t!("ERROR_OPEN_PROFILE_LIST_KEY_FAILED"))?;
 
-    let default_profile_raw: String = profile_list_key
+    let default_profile_raw_string: String = profile_list_key
         .get_value(DEFAULT_PROFILE_VALUE_NAME)
         .context(t!("ERROR_READ_DEFAULT_PROFILE_VALUE_FAILED"))?;
 
     // Expand potential environment variables like %SystemDrive%
-    let expanded_path =
-        ExpandEnvironmentStrings(&default_profile_raw).unwrap_or(default_profile_raw);
+    let expanded_profile_path_string =
+        ExpandEnvironmentStrings(&default_profile_raw_string).unwrap_or(default_profile_raw_string);
 
-    Ok(PathBuf::from(expanded_path))
+    Ok(PathBuf::from(expanded_profile_path_string))
 }

@@ -12,7 +12,7 @@ use app::{
     init,
     instance::{self, SingleInstanceGuard, SingleInstanceStatus},
 };
-use error::show_error_dialog;
+use ui::dialog;
 
 i18n!("locales", fallback = "en-US");
 
@@ -44,7 +44,7 @@ fn main() {
 
     if let Err(app_runtime_error) = app::MainWindow::create_and_run() {
         let app_runtime_error_message = app_runtime_error.to_string();
-        error::show_error_dialog(&app_runtime_error_message);
+        dialog::show_error_dialog(None, &app_runtime_error_message);
     }
 }
 
@@ -57,19 +57,25 @@ fn ensure_trustedinstaller() -> ElevationOutcome {
         Ok(ElevationStatus::RequiresElevation) => {
             if let Err(elevation_error) = elevate_ti::relaunch_as_trustedinstaller() {
                 let elevation_error_message = elevation_error.to_string();
-                error::show_error_dialog(&t!(
-                    "ERROR_ELEVATE_TO_TRUSTEDINSTALLER_FAILED",
-                    error_message = elevation_error_message
-                ));
+                dialog::show_error_dialog(
+                    None,
+                    &t!(
+                        "ERROR_ELEVATE_TO_TRUSTEDINSTALLER_FAILED",
+                        error_message = elevation_error_message
+                    ),
+                );
             }
             ElevationOutcome::Terminate
         }
         Err(check_elevation_error) => {
             let check_elevation_error_message = check_elevation_error.to_string();
-            error::show_error_dialog(&t!(
-                "ERROR_EVALUATE_TRUSTEDINSTALLER_STATUS_FAILED",
-                error_message = check_elevation_error_message
-            ));
+            dialog::show_error_dialog(
+                None,
+                &t!(
+                    "ERROR_EVALUATE_TRUSTEDINSTALLER_STATUS_FAILED",
+                    error_message = check_elevation_error_message
+                ),
+            );
             ElevationOutcome::Terminate
         }
     }
@@ -85,7 +91,7 @@ fn acquire_single_instance() -> Option<SingleInstanceGuard> {
         SingleInstanceStatus::AlreadyRunning => None,
         SingleInstanceStatus::CreationFailed(create_mutex_error) => {
             let create_mutex_error_message = create_mutex_error.to_string();
-            show_error_dialog(&create_mutex_error_message);
+            dialog::show_error_dialog(None, &create_mutex_error_message);
             None
         }
     }

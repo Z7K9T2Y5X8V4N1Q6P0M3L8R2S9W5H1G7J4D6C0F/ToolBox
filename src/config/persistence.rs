@@ -30,7 +30,7 @@ use windows::Win32::{
 };
 use winsafe::{HACCESSTOKEN, SHGetKnownFolderPath, co};
 
-use crate::error;
+use crate::ui::dialog;
 
 use super::AppLanguage;
 
@@ -169,10 +169,13 @@ impl AppConfig {
     /// Panics if the subsequent save also fails.
     fn handle_corrupted_config(config_parse_error: anyhow::Error) -> Self {
         let config_parse_error_message = config_parse_error.to_string();
-        error::show_error_dialog(&t!(
-            "CONFIG_PARSE_FAILED_USING_DEFAULT",
-            error_message = config_parse_error_message
-        ));
+        dialog::show_error_dialog(
+            None,
+            &t!(
+                "CONFIG_PARSE_FAILED_USING_DEFAULT",
+                error_message = config_parse_error_message
+            ),
+        );
 
         let default_config = Self::default();
         if let Err(config_save_error) = default_config.save() {

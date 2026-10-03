@@ -8,7 +8,7 @@
 use rust_i18n::t;
 use std::panic;
 
-use super::show_fatal_error_dialog;
+use crate::ui::dialog;
 
 /// Install a panic hook that displays the panic message in a Win32 error dialog.
 ///
@@ -18,7 +18,7 @@ pub fn install_panic_hook() {
     panic::set_hook(Box::new(|panic_info| {
         let panic_error_message = extract_panic_message(panic_info.payload());
         let fatal_dialog_content = t!("FATAL_ERROR_CONTENT", error_message = panic_error_message);
-        show_fatal_error_dialog(&fatal_dialog_content);
+        dialog::show_fatal_error_dialog(&fatal_dialog_content);
     }));
 }
 

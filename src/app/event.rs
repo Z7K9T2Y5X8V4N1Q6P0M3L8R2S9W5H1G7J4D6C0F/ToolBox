@@ -15,8 +15,7 @@ use winsafe::{co, gui};
 
 use crate::{
     app::MainWindow,
-    error,
-    ui::{font::FontSyncResult, menu, tab::TabContainer},
+    ui::{dialog, font::FontSyncResult, menu, tab::TabContainer},
 };
 
 use super::instance;
@@ -175,7 +174,8 @@ fn register_window_app_message_event(main_window_instance: &MainWindow) {
                 .borrow_mut()
                 .take()
             {
-                error::show_error_dialog(&deferred_error_message);
+                let main_window_hwnd = cloned_main_window_instance.main_window.hwnd();
+                dialog::show_error_dialog(Some(main_window_hwnd), &deferred_error_message);
             }
             Ok(0)
         });

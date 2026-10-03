@@ -10,9 +10,10 @@ use winsafe::{
 };
 
 use crate::{
-    app::{MainWindow, UserConfirmationOutcome},
+    app::MainWindow,
     config::{AppConfig, AppLanguage},
     desktop,
+    ui::dialog::{self, UserConfirmationOutcome},
 };
 
 use super::state::{
@@ -31,7 +32,9 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
     main_window_instance.main_window.on().wm_command_acc_menu(
         IDM_OPTIONS_RESTART_EXPLORER,
         move || {
-            let confirmation = cloned_main_window_for_restart_explorer.prompt_confirmation(
+            let main_window_hwnd = cloned_main_window_for_restart_explorer.main_window.hwnd();
+            let confirmation = dialog::prompt_confirmation_dialog(
+                Some(main_window_hwnd),
                 &t!("MENU_OPTIONS_RESTART_EXPLORER"),
                 &t!("CONFIRM_RESTART_EXPLORER_MESSAGE"),
             )?;
@@ -54,7 +57,9 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
     main_window_instance.main_window.on().wm_command_acc_menu(
         IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
         move || {
-            let confirmation = cloned_main_window_for_repair_styles.prompt_confirmation(
+            let main_window_hwnd = cloned_main_window_for_repair_styles.main_window.hwnd();
+            let confirmation = dialog::prompt_confirmation_dialog(
+                Some(main_window_hwnd),
                 &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
                 &t!("CONFIRM_REPAIR_VISUAL_STYLES_MESSAGE"),
             )?;
@@ -65,7 +70,8 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
 
             match desktop::theme::apply_default_metrics() {
                 Ok(()) => {
-                    cloned_main_window_for_repair_styles.show_info_dialog(
+                    dialog::show_info_dialog(
+                        Some(main_window_hwnd),
                         &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
                         &t!("REPAIR_VISUAL_STYLES_SUCCESS"),
                     )?;

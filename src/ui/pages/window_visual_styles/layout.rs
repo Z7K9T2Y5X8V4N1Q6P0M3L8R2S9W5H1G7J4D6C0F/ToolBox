@@ -175,7 +175,7 @@ pub(super) fn calculate_edit_ideal_height(edit_hwnd: &HWND) -> i32 {
 
     // If an explicit font is present, borrow it directly; otherwise dereference the guard to &HFONT.
     let active_font: &HFONT = match &explicit_font {
-        Some(font) => font,
+        Some(explicit_window_font) => explicit_window_font,
         None => fallback_font_guard.as_ref().unwrap(),
     };
 

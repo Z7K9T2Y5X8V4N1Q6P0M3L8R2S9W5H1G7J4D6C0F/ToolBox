@@ -193,7 +193,11 @@ fn reset_active_user_metrics_subkey_from_mounted_template(
     // Step 1: Collect and delete all existing values under the target user's metrics subkey
     let active_user_existing_metrics_value_names: Vec<String> = active_user_metrics_subkey
         .enum_values()
-        .filter_map(|enum_result| enum_result.ok().map(|(value_name, _)| value_name))
+        .filter_map(|registry_value_entry_result| {
+            registry_value_entry_result.ok().map(
+                |(active_user_metric_value_name, _metric_value_data)| active_user_metric_value_name,
+            )
+        })
         .collect();
 
     for active_user_existing_metrics_value_name in active_user_existing_metrics_value_names {

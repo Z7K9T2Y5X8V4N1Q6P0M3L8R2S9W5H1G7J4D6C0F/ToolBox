@@ -140,9 +140,9 @@ impl ProcessManager {
             .system_monitor
             .processes()
             .iter()
-            .filter_map(|(process_id, process)| {
-                let process_id = process_id.as_u32();
-                let process_name = process.name().to_string_lossy().to_string();
+            .filter_map(|(system_pid, system_process)| {
+                let process_id = system_pid.as_u32();
+                let process_name = system_process.name().to_string_lossy().to_string();
 
                 if is_filter_active {
                     let is_name_matched = process_name.to_lowercase().contains(&self.search_filter);

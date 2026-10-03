@@ -164,10 +164,10 @@ fn apply_language_change(
         .update_tab_control_titles()?;
     main_window_instance.tab_container.update_page_contents()?;
 
-    let mut config = AppConfig::load();
-    config.language = language;
+    let mut persisted_app_config = AppConfig::load();
+    persisted_app_config.language = language;
 
-    if let Err(config_save_error) = config.save() {
+    if let Err(config_save_error) = persisted_app_config.save() {
         let config_save_error_message = config_save_error.to_string();
         let deferred_error_message = t!(
             "CONFIG_SAVE_FAILED",

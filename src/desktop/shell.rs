@@ -110,15 +110,16 @@ pub fn restart_desktop_shell() -> Result<()> {
 
 /// Determine whether the shell should be restarted by Winlogon or manually spawned.
 fn determine_shell_restart_strategy() -> ShellRestartStrategy {
-    let local_machine_root = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let winlogon_key =
-        match local_machine_root.open_subkey_with_flags(WINLOGON_REGISTRY_PATH, KEY_QUERY_VALUE) {
-            Ok(key) => key,
-            Err(_) => return ShellRestartStrategy::ManualSpawnAsUser,
-        };
+    let local_machine_root_key = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let system_winlogon_key = match local_machine_root_key
+        .open_subkey_with_flags(WINLOGON_REGISTRY_PATH, KEY_QUERY_VALUE)
+    {
+        Ok(system_winlogon_key) => system_winlogon_key,
+        Err(_) => return ShellRestartStrategy::ManualSpawnAsUser,
+    };
 
     let auto_restart_value_result: Result<u32, _> =
-        winlogon_key.get_value(AUTO_RESTART_SHELL_VALUE_NAME);
+        system_winlogon_key.get_value(AUTO_RESTART_SHELL_VALUE_NAME);
     match auto_restart_value_result {
         Ok(current_value) if current_value == AUTO_RESTART_SHELL_ENABLED_VALUE => {
             ShellRestartStrategy::AutomaticByWinlogon
@@ -146,9 +147,9 @@ fn resolve_shell_command_line() -> String {
     }
 
     // 2. Try reading the system HKLM configuration
-    let local_machine_root = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let local_machine_root_key = RegKey::predef(HKEY_LOCAL_MACHINE);
     if let Ok(system_winlogon_key) =
-        local_machine_root.open_subkey_with_flags(WINLOGON_REGISTRY_PATH, KEY_QUERY_VALUE)
+        local_machine_root_key.open_subkey_with_flags(WINLOGON_REGISTRY_PATH, KEY_QUERY_VALUE)
     {
         if let Ok(shell_value) =
             system_winlogon_key.get_value::<String, _>(SHELL_REGISTRY_VALUE_NAME)

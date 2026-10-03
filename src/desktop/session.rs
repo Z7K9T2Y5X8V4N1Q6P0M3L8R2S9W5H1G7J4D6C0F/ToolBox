@@ -54,8 +54,8 @@ pub fn resolve_active_user_sid() -> Result<String> {
 /// Open the root `HKEY_USERS\<Active-User-SID>` registry key for the current interactive user.
 pub fn open_active_user_registry_root() -> Result<RegKey> {
     let user_sid = resolve_active_user_sid()?;
-    let root_users_key = RegKey::predef(HKEY_USERS);
-    root_users_key
+    let users_root_key = RegKey::predef(HKEY_USERS);
+    users_root_key
         .open_subkey(&user_sid)
         .with_context(|| t!("ERROR_OPEN_USER_REGISTRY_ROOT_FAILED", user_sid = user_sid))
 }

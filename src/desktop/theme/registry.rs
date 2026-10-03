@@ -1,14 +1,19 @@
 //! Generic registry import engine for desktop visual styles and metrics.
 //!
-//! Loads the default user profile registry hive (`Default\NTUSER.DAT`) to extract
-//! original non-client metrics, colors, and visual appearance configurations
-//! directly from the operating system template, ensuring correct localization across languages.
+//! Copies the default user profile registry hive (`Default\NTUSER.DAT`) to an isolated
+//! temporary directory, loads it into a temporary subkey, extracts original non-client
+//! metrics, colors, and visual appearance configurations directly from the operating
+//! system template, and restores them to the active interactive user's registry hive.
 
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result, anyhow, bail};
 use elevate_ti::{Privilege, ProcessToken};
 use rust_i18n::t;
+use windows::Win32::System::Threading::GetCurrentProcessId;
 use winreg::{
     RegKey,
     enums::{HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_ALL_ACCESS, KEY_READ},
@@ -35,18 +40,44 @@ const PROFILE_LIST_REGISTRY_PATH: &str =
 /// Registry value name for the default user profile directory.
 const DEFAULT_PROFILE_VALUE_NAME: &str = "Default";
 
-/// RAII guard ensuring the temporary mounted registry hive is properly unloaded on drop.
+/// File name of the user profile registry hive.
+const DEFAULT_USER_PROFILE_HIVE_FILE_NAME: &str = "NTUSER.DAT";
+
+/// RAII guard ensuring the temporary mounted registry hive is properly unloaded
+/// and its isolated temporary directory is cleaned up on drop.
 struct LoadedHiveGuard {
     mounted_hive_subkey_name: String,
+    temporary_directory_path: PathBuf,
 }
 
 impl LoadedHiveGuard {
-    /// Mount the offline hive file located at `hive_file_path` under `HKEY_USERS\<mounted_hive_subkey_name>`.
-    fn load(mounted_hive_subkey_name: &str, hive_file_path: &Path) -> Result<Self> {
+    /// Copy the offline hive file to an isolated temporary location and mount it under `HKEY_USERS`.
+    fn load(mounted_hive_subkey_name: &str, source_hive_file_path: &Path) -> Result<Self> {
         enable_required_registry_privileges()
             .context(t!("ERROR_ENABLE_REGISTRY_PRIVILEGES_FAILED"))?;
 
-        let hive_path_string = hive_file_path
+        let current_process_id = unsafe { GetCurrentProcessId() };
+        let timestamp_millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(1_145_140_000_000, |duration| duration.as_millis());
+
+        let temporary_directory_name =
+            format!("{TEMPORARY_DEFAULT_HIVE_SUBKEY}.{current_process_id}{timestamp_millis}");
+        let temporary_directory_path = std::env::temp_dir().join(temporary_directory_name);
+
+        fs::create_dir_all(&temporary_directory_path).context(t!(
+            "CONFIG_DIR_CREATE_FAILED",
+            config_path_parent = temporary_directory_path.display().to_string()
+        ))?;
+
+        let temporary_hive_file_path =
+            temporary_directory_path.join(DEFAULT_USER_PROFILE_HIVE_FILE_NAME);
+        fs::copy(source_hive_file_path, &temporary_hive_file_path).context(t!(
+            "CONFIG_WRITE_FAILED",
+            config_path = temporary_hive_file_path.display().to_string()
+        ))?;
+
+        let hive_path_string = temporary_hive_file_path
             .to_str()
             .context(t!("ERROR_RESOLVE_DEFAULT_PROFILE_PATH_FAILED"))?;
 
@@ -56,6 +87,7 @@ impl LoadedHiveGuard {
 
         Ok(Self {
             mounted_hive_subkey_name: mounted_hive_subkey_name.to_string(),
+            temporary_directory_path,
         })
     }
 }
@@ -63,22 +95,26 @@ impl LoadedHiveGuard {
 impl Drop for LoadedHiveGuard {
     fn drop(&mut self) {
         if let Err(unload_error) = HKEY::USERS.RegUnLoadKey(Some(&self.mounted_hive_subkey_name)) {
+            let unload_error_description = unload_error.to_string();
             log::warn!(
                 "{}",
                 t!(
                     "WARN_UNLOAD_DEFAULT_HIVE_FAILED",
                     subkey = self.mounted_hive_subkey_name,
-                    error = unload_error
+                    error = unload_error_description
                 )
             );
         }
+
+        let _ = fs::remove_dir_all(&self.temporary_directory_path);
     }
 }
 
 /// Restore default visual styles, system colors, and non-client metrics for the active user.
 ///
-/// Mounts `Default\NTUSER.DAT`, purges existing configuration under the target keys,
-/// clones default entries into the active user's registry hive, and unloads the file when complete.
+/// Copies `Default\NTUSER.DAT` to a temporary directory, mounts the replica into `HKEY_USERS`,
+/// purges existing configurations under the target keys, clones default entries into the active
+/// user's registry hive, and ensures clean unmounting and removal of temporary files.
 pub fn apply_default_metrics() -> Result<()> {
     let default_hive_file_path = resolve_default_user_hive_path()?;
     if !default_hive_file_path.exists() {
@@ -91,7 +127,7 @@ pub fn apply_default_metrics() -> Result<()> {
         );
     }
 
-    // 1. Mount the offline Default NTUSER.DAT into HKEY_USERS
+    // 1. Copy and mount the offline Default NTUSER.DAT into HKEY_USERS
     let _loaded_hive_guard =
         LoadedHiveGuard::load(TEMPORARY_DEFAULT_HIVE_SUBKEY, &default_hive_file_path)
             .with_context(|| {
@@ -105,7 +141,9 @@ pub fn apply_default_metrics() -> Result<()> {
                 )
             })?;
 
-    // 2. Open both the mounted template hive and the active user registry root
+    // 2. Open registry roots. Because mounted_template_root_key and active_user_root_key
+    // are declared after _loaded_hive_guard, Rust's LIFO drop order guarantees that
+    // all open registry subkey handles are closed before _loaded_hive_guard calls RegUnLoadKey.
     let users_root_key = RegKey::predef(HKEY_USERS);
     let mounted_template_root_key = users_root_key
         .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY, KEY_READ)
@@ -115,7 +153,7 @@ pub fn apply_default_metrics() -> Result<()> {
 
     // 3. Purge existing target keys and clone fresh contents
     for relative_metrics_subkey_path in TARGET_REGISTRY_SUBKEYS {
-        reset_target_metrics_subkey_from_source_template(
+        reset_active_user_metrics_subkey_from_mounted_template(
             &mounted_template_root_key,
             &active_user_root_key,
             relative_metrics_subkey_path,
@@ -126,7 +164,7 @@ pub fn apply_default_metrics() -> Result<()> {
 }
 
 /// Purge existing user configuration and clone fresh metric values from the mounted default user hive.
-fn reset_target_metrics_subkey_from_source_template(
+fn reset_active_user_metrics_subkey_from_mounted_template(
     mounted_template_root_key: &RegKey,
     active_user_root_key: &RegKey,
     relative_metrics_subkey_path: &str,
@@ -199,8 +237,9 @@ fn enable_required_registry_privileges() -> Result<()> {
 fn resolve_default_user_hive_path() -> Result<PathBuf> {
     // 1. Try Windows Known Folder (UserProfiles, e.g. D:\Users)
     if let Some(user_profiles_directory) = fetch_user_profiles_known_folder() {
-        let known_folder_candidate_path =
-            user_profiles_directory.join("Default").join("NTUSER.DAT");
+        let known_folder_candidate_path = user_profiles_directory
+            .join("Default")
+            .join(DEFAULT_USER_PROFILE_HIVE_FILE_NAME);
         if known_folder_candidate_path.exists() {
             return Ok(known_folder_candidate_path);
         }
@@ -208,7 +247,8 @@ fn resolve_default_user_hive_path() -> Result<PathBuf> {
 
     // 2. Try HKLM ProfileList registry entry (expanded if contains environment variables)
     if let Ok(registry_default_profile_directory) = query_default_profile_path_from_registry() {
-        let registry_candidate_path = registry_default_profile_directory.join("NTUSER.DAT");
+        let registry_candidate_path =
+            registry_default_profile_directory.join(DEFAULT_USER_PROFILE_HIVE_FILE_NAME);
         if registry_candidate_path.exists() {
             return Ok(registry_candidate_path);
         }
@@ -220,7 +260,7 @@ fn resolve_default_user_hive_path() -> Result<PathBuf> {
             .join(std::path::MAIN_SEPARATOR_STR)
             .join("Users")
             .join("Default")
-            .join("NTUSER.DAT");
+            .join(DEFAULT_USER_PROFILE_HIVE_FILE_NAME);
 
         if system_drive_candidate_path.exists() {
             return Ok(system_drive_candidate_path);

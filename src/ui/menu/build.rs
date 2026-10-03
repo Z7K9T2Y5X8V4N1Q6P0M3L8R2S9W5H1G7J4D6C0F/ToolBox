@@ -1,13 +1,15 @@
-//! Menu bar construction.
+//! Menu bar construction and lifecycle management.
 //!
-//! [`build_main_menu`] builds the full menu tree from scratch using the
-//! current locale. It is called once on window creation and again after
-//! every language change via [`rebuild_main_menu`].
+//! Provides RAII guard primitives for detached Win32 [`HMENU`] instances to ensure
+//! complete leak prevention during creation failures, alongside clean menu bar replacement
+//! and non-client metric synchronization.
 
 use std::ops::Deref;
 
+use anyhow::{Context, Result};
 use rust_i18n::t;
-use winsafe::{AnyResult, BmpPtrStr, HMENU, HWND, IdMenu, MenuItem, co};
+use windows::Win32::{Foundation::HWND as RawHwnd, UI::WindowsAndMessaging::DrawMenuBar};
+use winsafe::{BmpPtrStr, HMENU, HWND, IdMenu, MenuItem, co};
 
 use super::state::{
     IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
@@ -16,71 +18,162 @@ use super::state::{
     IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
 };
 
-/// Build the complete main menu bar using the current locale.
+/// RAII scope guard holding an unattached [`HMENU`] handle.
 ///
-/// Returns a new [`HMENU`] that can be attached to the main window
-/// via [`winsafe::HWND::SetMenu`].
-pub fn build_main_menu() -> AnyResult<HMENU> {
-    let main_menu_bar = HMENU::CreateMenu()?;
-
-    let options_popup_menu = create_options_popup_menu()?;
-    let language_popup_menu = create_language_popup_menu()?;
-
-    main_menu_bar.append_item(&[
-        MenuItem::Submenu {
-            submenu: &options_popup_menu,
-            text: &t!("MENU_OPTIONS"),
-        },
-        MenuItem::Submenu {
-            submenu: &language_popup_menu,
-            text: &t!("MENU_LANGUAGE"),
-        },
-    ])?;
-
-    Ok(main_menu_bar)
+/// Win32 menus that are not yet associated with a window or embedded inside a parent
+/// menu are owned by the process. If an error occurs prior to mounting, this guard
+/// invokes [`HMENU::DestroyMenu`] upon drop to prevent GDI/User handle leaks.
+///
+/// Once ownership has been transferred to a window or a parent menu, the guard can be
+/// disarmed via [`UnattachedMenuGuard::into_raw`] or attached atomically via
+/// [`UnattachedMenuGuard::attach_to_window`].
+pub struct UnattachedMenuGuard {
+    menu_handle: Option<HMENU>,
 }
 
-/// Build the Options submenu.
-fn create_options_popup_menu() -> AnyResult<HMENU> {
-    let options_popup_menu = HMENU::CreatePopupMenu()?;
-    options_popup_menu.append_item(&[
-        MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
-            text: &t!("MENU_OPTIONS_RESTART_EXPLORER"),
-        },
-        MenuItem::Separator,
-        MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
-            text: &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
-        },
-        MenuItem::Separator,
-        MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
-            text: &t!("MENU_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES"),
-        },
-        MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
-            text: &t!("MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES"),
-        },
-        MenuItem::Separator,
-        MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
-            text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES"),
-        },
-        MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
-            text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES"),
-        },
-    ])?;
-    Ok(options_popup_menu)
+impl UnattachedMenuGuard {
+    /// Encapsulate a newly created unattached menu handle inside an RAII scope guard.
+    pub const fn new(menu_handle: HMENU) -> Self {
+        Self {
+            menu_handle: Some(menu_handle),
+        }
+    }
+
+    /// Borrow the underlying [`HMENU`] handle.
+    pub fn handle(&self) -> Result<&HMENU> {
+        self.menu_handle
+            .as_ref()
+            .context(t!("ERROR_WINDOW_MENU_ALREADY_ATTACHED"))
+    }
+
+    /// Disarm the guard and extract the inner [`HMENU`] handle without destroying it.
+    ///
+    /// Must only be called when ownership has been successfully transferred to an external
+    /// owner (such as a parent menu).
+    pub fn into_raw(mut self) -> Result<HMENU> {
+        self.menu_handle
+            .take()
+            .context(t!("ERROR_WINDOW_MENU_ALREADY_ATTACHED"))
+    }
+
+    /// Atomically transfer ownership of this menu to the specified window.
+    ///
+    /// Replaces the window's existing menu, destroys the detached previous menu (if present),
+    /// updates the window's non-client menu metrics via [`DrawMenuBar`], and consumes this guard.
+    pub fn attach_to_window(mut self, target_window_hwnd: &HWND) -> Result<()> {
+        let previous_menu_handle = target_window_hwnd.GetMenu();
+
+        // 1. Attempt to mount the new menu first. If this operation fails, `self` remains
+        // intact and its `Drop` implementation will automatically destroy the unattached menu.
+        target_window_hwnd
+            .SetMenu(self.handle()?)
+            .context(t!("ERROR_WINDOW_SET_MENU_FAILED"))?;
+
+        // 2. Once mounting succeeds, disarm the guard by taking ownership out of the Option.
+        let _ = self.menu_handle.take();
+
+        // 3. Destroy the previously mounted menu which is now detached from the window.
+        if let Some(mut previous_unattached_menu) = previous_menu_handle {
+            previous_unattached_menu
+                .DestroyMenu()
+                .context(t!("ERROR_WINDOW_DESTROY_MENU_FAILED"))?;
+        }
+
+        let raw_window_handle = RawHwnd(target_window_hwnd.ptr());
+        let _ = unsafe { DrawMenuBar(raw_window_handle) };
+
+        Ok(())
+    }
 }
 
-/// Build the Language submenu.
+impl Drop for UnattachedMenuGuard {
+    fn drop(&mut self) {
+        if let Some(mut unattached_menu_handle) = self.menu_handle.take() {
+            let _ = unattached_menu_handle.DestroyMenu();
+        }
+    }
+}
+
+/// Build the complete main menu bar using the current locale wrapped in an RAII guard.
 ///
-/// The currently active locale is shown as checked and grayed so the user
-/// can see the selection but cannot re-select it.
-fn create_language_popup_menu() -> AnyResult<HMENU> {
-    let language_popup_menu = HMENU::CreatePopupMenu()?;
+/// Returns an [`UnattachedMenuGuard`] holding the newly created menu tree.
+pub fn build_main_menu() -> Result<UnattachedMenuGuard> {
+    let root_menu_bar_handle =
+        HMENU::CreateMenu().context(t!("ERROR_WINDOW_CREATE_MENU_FAILED"))?;
+    let root_menu_bar_guard = UnattachedMenuGuard::new(root_menu_bar_handle);
+
+    let options_popup_menu_guard = create_options_popup_menu()?;
+    let language_popup_menu_guard = create_language_popup_menu()?;
+
+    root_menu_bar_guard
+        .handle()?
+        .append_item(&[
+            MenuItem::Submenu {
+                submenu: options_popup_menu_guard.handle()?,
+                text: &t!("MENU_OPTIONS"),
+            },
+            MenuItem::Submenu {
+                submenu: language_popup_menu_guard.handle()?,
+                text: &t!("MENU_LANGUAGE"),
+            },
+        ])
+        .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
+
+    // Submenus are now firmly embedded in the root menu tree; disarm their guards
+    // so they are not destroyed upon exiting this scope.
+    let _ = options_popup_menu_guard.into_raw()?;
+    let _ = language_popup_menu_guard.into_raw()?;
+
+    Ok(root_menu_bar_guard)
+}
+
+/// Build the Options submenu wrapped in an RAII guard.
+fn create_options_popup_menu() -> Result<UnattachedMenuGuard> {
+    let options_popup_menu_handle =
+        HMENU::CreatePopupMenu().context(t!("ERROR_WINDOW_CREATE_MENU_FAILED"))?;
+    let options_popup_menu_guard = UnattachedMenuGuard::new(options_popup_menu_handle);
+
+    options_popup_menu_guard
+        .handle()?
+        .append_item(&[
+            MenuItem::Entry {
+                cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
+                text: &t!("MENU_OPTIONS_RESTART_EXPLORER"),
+            },
+            MenuItem::Separator,
+            MenuItem::Entry {
+                cmd_id: IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
+                text: &t!("MENU_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT"),
+            },
+            MenuItem::Separator,
+            MenuItem::Entry {
+                cmd_id: IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
+                text: &t!("MENU_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES"),
+            },
+            MenuItem::Entry {
+                cmd_id: IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
+                text: &t!("MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES"),
+            },
+            MenuItem::Separator,
+            MenuItem::Entry {
+                cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
+                text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES"),
+            },
+            MenuItem::Entry {
+                cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+                text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES"),
+            },
+        ])
+        .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
+
+    Ok(options_popup_menu_guard)
+}
+
+/// Build the Language submenu wrapped in an RAII guard.
+fn create_language_popup_menu() -> Result<UnattachedMenuGuard> {
+    let language_popup_menu_handle =
+        HMENU::CreatePopupMenu().context(t!("ERROR_WINDOW_CREATE_MENU_FAILED"))?;
+    let language_popup_menu_guard = UnattachedMenuGuard::new(language_popup_menu_handle);
     let current_locale = rust_i18n::locale();
 
     let languages = [
@@ -95,25 +188,26 @@ fn create_language_popup_menu() -> AnyResult<HMENU> {
         } else {
             co::MF::STRING
         };
-        language_popup_menu.AppendMenu(
-            menu_item_flags,
-            IdMenu::Id(menu_command_id),
-            BmpPtrStr::from_str(display_text),
-        )?;
+
+        language_popup_menu_guard
+            .handle()?
+            .AppendMenu(
+                menu_item_flags,
+                IdMenu::Id(menu_command_id),
+                BmpPtrStr::from_str(display_text),
+            )
+            .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
     }
 
-    Ok(language_popup_menu)
+    Ok(language_popup_menu_guard)
 }
 
 /// Destroy the current menu bar and replace it with a freshly built one.
 ///
-/// Called after a language change so all menu labels reflect the new locale.
-/// The old [`HMENU`] is explicitly destroyed to avoid a resource leak.
-pub(super) fn rebuild_main_menu(main_window_hwnd: &HWND) -> AnyResult<()> {
-    let old_hmenu = main_window_hwnd.GetMenu();
-    main_window_hwnd.SetMenu(&build_main_menu()?)?;
-    if let Some(mut old_hmenu) = old_hmenu {
-        old_hmenu.DestroyMenu()?;
-    }
+/// Builds a new menu tree protected by an RAII guard, atomically attaches it to
+/// the target window while reclaiming previous menu handles, and triggers non-client redraw.
+pub(super) fn rebuild_main_menu(main_window_hwnd: &HWND) -> Result<()> {
+    let new_menu_bar_guard = build_main_menu()?;
+    new_menu_bar_guard.attach_to_window(main_window_hwnd)?;
     Ok(())
 }

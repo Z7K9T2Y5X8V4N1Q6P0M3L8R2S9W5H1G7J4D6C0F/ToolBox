@@ -65,8 +65,8 @@ fn register_window_create_event(main_window_instance: &MainWindow) {
     let cloned_main_window_instance = main_window_instance.clone();
     main_window_instance.main_window.on().wm_create(move |_| {
         let main_window_hwnd = cloned_main_window_instance.main_window.hwnd();
-        let main_menu_bar = menu::build_main_menu()?;
-        main_window_hwnd.SetMenu(&main_menu_bar)?;
+        let main_menu_bar_guard = menu::build_main_menu()?;
+        main_menu_bar_guard.attach_to_window(main_window_hwnd)?;
         layout::center_and_resize_window(main_window_hwnd)?;
 
         cloned_main_window_instance

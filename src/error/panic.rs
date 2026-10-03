@@ -7,7 +7,8 @@
 
 use rust_i18n::t;
 use std::panic;
-use winsafe::{HWND, co, prelude::Handle};
+
+use super::show_fatal_error_dialog;
 
 /// Install a panic hook that displays the panic message in a Win32 error dialog.
 ///
@@ -15,16 +16,9 @@ use winsafe::{HWND, co, prelude::Handle};
 /// that could panic. Replaces the default stderr-based panic handler.
 pub fn install_panic_hook() {
     panic::set_hook(Box::new(|panic_info| {
-        HWND::NULL
-            .MessageBox(
-                &t!(
-                    "FATAL_ERROR_CONTENT",
-                    error = extract_panic_message(panic_info.payload())
-                ),
-                &t!("FATAL_ERROR_TITLE"),
-                co::MB::OK | co::MB::ICONERROR,
-            )
-            .ok();
+        let panic_error_message = extract_panic_message(panic_info.payload());
+        let fatal_dialog_content = t!("FATAL_ERROR_CONTENT", error_message = panic_error_message);
+        show_fatal_error_dialog(&fatal_dialog_content);
     }));
 }
 
@@ -34,11 +28,11 @@ pub fn install_panic_hook() {
 /// If neither type matches (e.g. a panic with a custom payload type),
 /// a generic fallback message is returned.
 fn extract_panic_message(payload: &dyn std::any::Any) -> String {
-    if let Some(message) = payload.downcast_ref::<&str>() {
-        return message.to_string();
+    if let Some(panic_error_message) = payload.downcast_ref::<&str>() {
+        return panic_error_message.to_string();
     }
-    if let Some(message) = payload.downcast_ref::<String>() {
-        return message.clone();
+    if let Some(panic_error_message) = payload.downcast_ref::<String>() {
+        return panic_error_message.clone();
     }
     t!("FATAL_ERROR_UNKNOWN_ERROR").to_string()
 }

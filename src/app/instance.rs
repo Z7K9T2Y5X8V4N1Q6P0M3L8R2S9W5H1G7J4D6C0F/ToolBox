@@ -61,8 +61,8 @@ pub fn check_single_instance() -> SingleInstanceStatus {
         Err(windows_error) => return SingleInstanceStatus::CreationFailed(windows_error),
     };
 
-    let is_already_exists = unsafe { GetLastError() == ERROR_ALREADY_EXISTS };
-    if is_already_exists {
+    let is_instance_already_existing = unsafe { GetLastError() == ERROR_ALREADY_EXISTS };
+    if is_instance_already_existing {
         unsafe {
             let _ = CloseHandle(mutex_handle);
         }

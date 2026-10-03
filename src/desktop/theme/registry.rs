@@ -83,7 +83,7 @@ impl LoadedHiveGuard {
 
         HKEY::USERS
             .RegLoadKey(Some(mounted_hive_subkey_name), hive_path_string)
-            .map_err(|error| anyhow!("{error}"))?;
+            .map_err(|hive_load_error| anyhow!("{hive_load_error}"))?;
 
         Ok(Self {
             mounted_hive_subkey_name: mounted_hive_subkey_name.to_string(),
@@ -94,14 +94,16 @@ impl LoadedHiveGuard {
 
 impl Drop for LoadedHiveGuard {
     fn drop(&mut self) {
-        if let Err(unload_error) = HKEY::USERS.RegUnLoadKey(Some(&self.mounted_hive_subkey_name)) {
-            let unload_error_description = unload_error.to_string();
+        if let Err(hive_unload_error) =
+            HKEY::USERS.RegUnLoadKey(Some(&self.mounted_hive_subkey_name))
+        {
+            let hive_unload_error_message = hive_unload_error.to_string();
             log::warn!(
                 "{}",
                 t!(
                     "WARN_UNLOAD_DEFAULT_HIVE_FAILED",
                     subkey = self.mounted_hive_subkey_name,
-                    error = unload_error_description
+                    error_message = hive_unload_error_message
                 )
             );
         }
@@ -117,12 +119,13 @@ impl Drop for LoadedHiveGuard {
 /// user's registry hive, and ensures clean unmounting and removal of temporary files.
 pub fn apply_default_metrics() -> Result<()> {
     let default_hive_file_path = resolve_default_user_hive_path()?;
+    let default_hive_file_path_string = default_hive_file_path.display().to_string();
     if !default_hive_file_path.exists() {
         bail!(
             "{}",
             t!(
                 "ERROR_DEFAULT_HIVE_NOT_FOUND",
-                path = default_hive_file_path.display().to_string()
+                default_hive_file_path = default_hive_file_path_string
             )
         );
     }
@@ -135,7 +138,7 @@ pub fn apply_default_metrics() -> Result<()> {
                     "{}: {}",
                     t!(
                         "ERROR_MOUNT_DEFAULT_HIVE_FAILED",
-                        path = default_hive_file_path.display().to_string()
+                        default_hive_file_path = default_hive_file_path_string
                     ),
                     default_hive_file_path.display()
                 )

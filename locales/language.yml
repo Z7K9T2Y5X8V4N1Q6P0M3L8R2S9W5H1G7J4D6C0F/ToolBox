@@ -68,8 +68,8 @@ FATAL_ERROR_TITLE:
   zh-CN: "严重错误"
 
 FATAL_ERROR_CONTENT:
-  en-US: "An unexpected error occurred:\n%{error}"
-  zh-CN: "发生了意料之外的错误:\n%{error}"
+  en-US: "An unexpected error occurred:\n%{error_message}"
+  zh-CN: "发生了意料之外的错误:\n%{error_message}"
 
 FATAL_ERROR_UNKNOWN_ERROR:
   en-US: "Unknown error"
@@ -92,12 +92,12 @@ INSTALL_UI_CUSTOMIZATION_HOOK_FAILED:
   zh-CN: "安装界面自定义钩子失败"
 
 ERROR_ELEVATE_TO_TRUSTEDINSTALLER_FAILED:
-  en-US: "Failed to elevate to TrustedInstaller: %{elevation_error}"
-  zh-CN: "提升至 TrustedInstaller 权限失败: %{elevation_error}"
+  en-US: "Failed to elevate to TrustedInstaller: %{error_message}"
+  zh-CN: "提升至 TrustedInstaller 权限失败: %{error_message}"
 
 ERROR_EVALUATE_TRUSTEDINSTALLER_STATUS_FAILED:
-  en-US: "Failed to evaluate TrustedInstaller token status: %{check_error}"
-  zh-CN: "检查 TrustedInstaller 令牌状态失败: %{check_error}"
+  en-US: "Failed to evaluate TrustedInstaller token status: %{error_message}"
+  zh-CN: "检查 TrustedInstaller 令牌状态失败: %{error_message}"
 
 ERROR_GET_NONCLIENTMETRICS_FAILED:
   en-US: "Failed to get system non-client metrics"
@@ -124,16 +124,16 @@ ATTACH_HEADER_SUBCLASS_SET_PROP_FAILED:
   zh-CN: "附加表头子类化属性到窗口句柄失败"
 
 ERROR_RENDER_SORT_INDICATOR_FAILED:
-  en-US: "Failed to render Marlett sort indicator on column %{column_index}: %{error}"
-  zh-CN: "在第 %{column_index} 列绘制 Marlett 排序指示符失败：%{error}"
+  en-US: "Failed to render Marlett sort indicator on column %{column_index}: %{error_message}"
+  zh-CN: "在第 %{column_index} 列绘制 Marlett 排序指示符失败：%{error_message}"
 
 CONFIG_SAVE_DEFAULT_FAILED:
-  en-US: "Failed to save default config:\n%{save_error}"
-  zh-CN: "默认配置保存失败:\n%{save_error}"
+  en-US: "Failed to save default config:\n%{error_message}"
+  zh-CN: "默认配置保存失败:\n%{error_message}"
 
 CONFIG_PARSE_FAILED_USING_DEFAULT:
-  en-US: "Failed to parse config, using default:\n%{parse_error}"
-  zh-CN: "配置文件解析失败，使用默认配置:\n%{parse_error}"
+  en-US: "Failed to parse config, using default:\n%{error_message}"
+  zh-CN: "配置文件解析失败，使用默认配置:\n%{error_message}"
 
 CONFIG_READ_FAILED:
   en-US: "Failed to read config file:\n%{config_path}"
@@ -160,8 +160,8 @@ CONFIG_WRITE_FAILED:
   zh-CN: "无法写入配置文件:\n%{config_path}"
 
 CONFIG_SAVE_FAILED:
-  en-US: "Failed to save configuration:\n%{save_error}"
-  zh-CN: "保存配置失败:\n%{save_error}"
+  en-US: "Failed to save configuration:\n%{error_message}"
+  zh-CN: "保存配置失败:\n%{error_message}"
 
 ERROR_DESTROY_IMAGELIST_FAILED:
   en-US: "Failed to destroy previous ImageList handle"
@@ -340,12 +340,12 @@ ERROR_REGISTRY_SET_VALUE_FAILED:
   zh-CN: "写入注册表键值失败: %{value_name}"
 
 ERROR_DEFAULT_HIVE_NOT_FOUND:
-  en-US: "Default user profile was not found at: %{path}"
-  zh-CN: "未找到默认用户配置文件：%{path}"
+  en-US: "Default user profile was not found at: %{default_hive_file_path}"
+  zh-CN: "未找到默认用户配置文件：%{default_hive_file_path}"
 
 ERROR_MOUNT_DEFAULT_HIVE_FAILED:
-  en-US: "Failed to load default user registry hive (%{path})"
-  zh-CN: "加载默认用户注册表配置（%{path}）失败"
+  en-US: "Failed to load default user registry hive (%{default_hive_file_path})"
+  zh-CN: "加载默认用户注册表配置（%{default_hive_file_path}）失败"
 
 ERROR_OPEN_MOUNTED_HIVE_FAILED:
   en-US: "Failed to open mounted temporary registry key"
@@ -376,8 +376,8 @@ ERROR_ENABLE_REGISTRY_PRIVILEGES_FAILED:
   zh-CN: "启用所需的注册表特权（SeBackupPrivilege 或 SeRestorePrivilege）失败"
 
 WARN_UNLOAD_DEFAULT_HIVE_FAILED:
-  en-US: "Failed to unload temporary registry hive: %{subkey}\nerror: %{error}"
-  zh-CN: "卸载临时注册表配置项失败: %{subkey}\n错误: %{error}"
+  en-US: "Failed to unload temporary registry hive: %{subkey}\nerror: %{error_message}"
+  zh-CN: "卸载临时注册表配置项失败: %{subkey}\n错误: %{error_message}"
 
 ERROR_OPEN_DEFAULT_HIVE_SUBKEY_FAILED:
   en-US: "Failed to open required default template registry branch: %{subkey_path}"

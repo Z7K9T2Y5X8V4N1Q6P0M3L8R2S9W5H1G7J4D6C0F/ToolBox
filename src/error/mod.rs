@@ -8,5 +8,5 @@
 mod dialog;
 pub mod panic;
 
-pub use dialog::show_error_dialog;
+pub use dialog::{show_error_dialog, show_fatal_error_dialog};
 pub use panic::install_panic_hook;

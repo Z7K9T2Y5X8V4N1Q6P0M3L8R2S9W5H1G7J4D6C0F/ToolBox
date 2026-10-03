@@ -102,7 +102,9 @@ impl AppConfig {
             ConfigLoadResult::NotFound(default_config) => {
                 Self::handle_missing_config(default_config)
             }
-            ConfigLoadResult::ParseFailed(error) => Self::handle_corrupted_config(error),
+            ConfigLoadResult::ParseFailed(config_parse_error) => {
+                Self::handle_corrupted_config(config_parse_error)
+            }
         }
     }
 
@@ -148,10 +150,14 @@ impl AppConfig {
     /// Panics if the save fails, because there is no safe way to continue
     /// without a writable config directory.
     fn handle_missing_config(default_config: Self) -> Self {
-        if let Err(save_error) = default_config.save() {
+        if let Err(config_save_error) = default_config.save() {
+            let config_save_error_message = config_save_error.to_string();
             panic!(
                 "{}",
-                t!("CONFIG_SAVE_DEFAULT_FAILED", save_error = save_error)
+                t!(
+                    "CONFIG_SAVE_DEFAULT_FAILED",
+                    error_message = config_save_error_message
+                )
             );
         }
         default_config
@@ -161,17 +167,22 @@ impl AppConfig {
     /// and return the default config.
     ///
     /// Panics if the subsequent save also fails.
-    fn handle_corrupted_config(error: anyhow::Error) -> Self {
+    fn handle_corrupted_config(config_parse_error: anyhow::Error) -> Self {
+        let config_parse_error_message = config_parse_error.to_string();
         error::show_error_dialog(&t!(
             "CONFIG_PARSE_FAILED_USING_DEFAULT",
-            parse_error = error
+            error_message = config_parse_error_message
         ));
 
         let default_config = Self::default();
-        if let Err(save_error) = default_config.save() {
+        if let Err(config_save_error) = default_config.save() {
+            let config_save_error_message = config_save_error.to_string();
             panic!(
                 "{}",
-                t!("CONFIG_SAVE_DEFAULT_FAILED", save_error = save_error)
+                t!(
+                    "CONFIG_SAVE_DEFAULT_FAILED",
+                    error_message = config_save_error_message
+                )
             );
         }
         default_config

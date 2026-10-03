@@ -72,10 +72,10 @@ impl MainWindow {
     pub fn prompt_confirmation(
         &self,
         title: &str,
-        message: &str,
+        prompt_message: &str,
     ) -> AnyResult<UserConfirmationOutcome> {
         let dialog_result = self.main_window.hwnd().MessageBox(
-            message,
+            prompt_message,
             title,
             co::MB::YESNO | co::MB::ICONQUESTION,
         )?;
@@ -94,7 +94,6 @@ impl MainWindow {
     /// causing nested message pump reentrancy.
     pub fn post_deferred_error(&self, error_message: String) {
         self.pending_error_message.replace(Some(error_message));
-
         unsafe {
             self.main_window
                 .hwnd()

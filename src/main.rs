@@ -42,8 +42,9 @@ fn main() {
         return;
     };
 
-    if let Err(runtime_error) = app::MainWindow::create_and_run() {
-        error::show_error_dialog(&runtime_error.to_string());
+    if let Err(app_runtime_error) = app::MainWindow::create_and_run() {
+        let app_runtime_error_message = app_runtime_error.to_string();
+        error::show_error_dialog(&app_runtime_error_message);
     }
 }
 
@@ -55,17 +56,19 @@ fn ensure_trustedinstaller() -> ElevationOutcome {
         Ok(ElevationStatus::TrustedInstaller) => ElevationOutcome::Proceed,
         Ok(ElevationStatus::RequiresElevation) => {
             if let Err(elevation_error) = elevate_ti::relaunch_as_trustedinstaller() {
+                let elevation_error_message = elevation_error.to_string();
                 error::show_error_dialog(&t!(
                     "ERROR_ELEVATE_TO_TRUSTEDINSTALLER_FAILED",
-                    elevation_error = elevation_error
+                    error_message = elevation_error_message
                 ));
             }
             ElevationOutcome::Terminate
         }
-        Err(check_error) => {
+        Err(check_elevation_error) => {
+            let check_elevation_error_message = check_elevation_error.to_string();
             error::show_error_dialog(&t!(
                 "ERROR_EVALUATE_TRUSTEDINSTALLER_STATUS_FAILED",
-                check_error = check_error
+                error_message = check_elevation_error_message
             ));
             ElevationOutcome::Terminate
         }
@@ -80,8 +83,9 @@ fn acquire_single_instance() -> Option<SingleInstanceGuard> {
     match instance::check_single_instance() {
         SingleInstanceStatus::Primary(guard) => Some(guard),
         SingleInstanceStatus::AlreadyRunning => None,
-        SingleInstanceStatus::CreationFailed(windows_error) => {
-            show_error_dialog(&windows_error.to_string());
+        SingleInstanceStatus::CreationFailed(create_mutex_error) => {
+            let create_mutex_error_message = create_mutex_error.to_string();
+            show_error_dialog(&create_mutex_error_message);
             None
         }
     }

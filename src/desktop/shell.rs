@@ -201,12 +201,12 @@ fn query_shell_process_id() -> Result<u32> {
 }
 
 /// Terminate the target process using `PROCESS_TERMINATE` access rights.
-fn terminate_process_by_id(process_id: u32) -> Result<()> {
-    let process_handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, process_id) }
+fn terminate_process_by_id(shell_process_id: u32) -> Result<()> {
+    let process_handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, shell_process_id) }
         .with_context(|| {
             t!(
                 "ERROR_OPEN_SHELL_PROCESS_FAILED",
-                shell_process_id = process_id
+                shell_process_id = shell_process_id
             )
         })?;
     let process_handle_guard = ProcessHandleGuard::new(process_handle);
@@ -215,7 +215,7 @@ fn terminate_process_by_id(process_id: u32) -> Result<()> {
         TerminateProcess(process_handle_guard.as_raw(), 0).with_context(|| {
             t!(
                 "ERROR_TERMINATE_SHELL_PROCESS_FAILED",
-                shell_process_id = process_id
+                shell_process_id = shell_process_id
             )
         })?;
     }

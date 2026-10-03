@@ -4,7 +4,6 @@
 //! UI component events (menu, tab, etc.) are registered in their own modules
 //! and called from [`register_all_events`].
 
-use rust_i18n::t;
 use windows::Win32::{
     Foundation::HWND as RawHwnd,
     UI::WindowsAndMessaging::{
@@ -16,6 +15,7 @@ use winsafe::{co, gui};
 
 use crate::{
     app::MainWindow,
+    error,
     ui::{font::FontSyncResult, menu, tab::TabContainer},
 };
 
@@ -84,8 +84,8 @@ fn register_window_min_max_info_event(main_window_instance: &MainWindow) {
     main_window_instance
         .main_window
         .on()
-        .wm_get_min_max_info(|min_max| {
-            apply_minimum_window_size(min_max.info);
+        .wm_get_min_max_info(|min_max_window_metrics| {
+            apply_minimum_window_size(min_max_window_metrics.info);
             Ok(())
         });
 }
@@ -170,16 +170,12 @@ fn register_window_app_message_event(main_window_instance: &MainWindow) {
         .main_window
         .on()
         .wm(co::WM::APP, move |_| {
-            if let Some(error_message) = cloned_main_window_instance
+            if let Some(deferred_error_message) = cloned_main_window_instance
                 .pending_error_message
                 .borrow_mut()
                 .take()
             {
-                cloned_main_window_instance.main_window.hwnd().MessageBox(
-                    &error_message,
-                    &t!("ERROR"),
-                    co::MB::OK | co::MB::ICONWARNING,
-                )?;
+                error::show_error_dialog(&deferred_error_message);
             }
             Ok(0)
         });

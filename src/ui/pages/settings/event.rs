@@ -156,13 +156,13 @@ fn update_scrollbar_range(
     scrollable_panel_visible_height: i32,
     content_panel_total_height: i32,
 ) -> AnyResult<()> {
-    let is_needs_scrollbar = content_panel_total_height > scrollable_panel_visible_height;
+    let is_scrollbar_needed = content_panel_total_height > scrollable_panel_visible_height;
     scrollable_panel
         .hwnd()
-        .ShowScrollBar(co::SBB::VERT, is_needs_scrollbar)
+        .ShowScrollBar(co::SBB::VERT, is_scrollbar_needed)
         .ok();
 
-    if is_needs_scrollbar {
+    if is_scrollbar_needed {
         let scrollable_maximum =
             (content_panel_total_height - scrollable_panel_visible_height).max(0);
 
@@ -224,13 +224,13 @@ fn setup_button_select_all_toggle_event(
     button_select_all_toggle: &gui::Button,
     checkboxes: &[(CheckboxId, gui::Button)],
 ) {
-    let checkboxes_buttons: Vec<gui::Button> = checkboxes
+    let checkbox_buttons: Vec<gui::Button> = checkboxes
         .iter()
         .map(|(_, checkbox)| checkbox.clone())
         .collect();
 
     button_select_all_toggle.on().bn_clicked(move || {
-        let all_currently_checked = checkboxes_buttons.iter().all(|checkbox_button| {
+        let all_currently_checked = checkbox_buttons.iter().all(|checkbox_button| {
             let check_state = unsafe { checkbox_button.hwnd().SendMessage(msg::BmGetCheck {}) };
             check_state == co::BST::CHECKED
         });
@@ -241,7 +241,7 @@ fn setup_button_select_all_toggle_event(
             co::BST::CHECKED
         };
 
-        for checkbox_button in &checkboxes_buttons {
+        for checkbox_button in &checkbox_buttons {
             unsafe {
                 checkbox_button.hwnd().SendMessage(msg::BmSetCheck {
                     state: target_check_state,

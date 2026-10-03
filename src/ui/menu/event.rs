@@ -40,9 +40,10 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
                 return Ok(());
             }
 
-            if let Err(restart_error) = desktop::restart_desktop_shell() {
+            if let Err(restart_shell_error) = desktop::restart_desktop_shell() {
+                let restart_shell_error_message = restart_shell_error.to_string();
                 cloned_main_window_for_restart_explorer
-                    .post_deferred_error(restart_error.to_string());
+                    .post_deferred_error(restart_shell_error_message);
             }
 
             Ok(())
@@ -69,9 +70,10 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
                         &t!("REPAIR_VISUAL_STYLES_SUCCESS"),
                     )?;
                 }
-                Err(repair_error) => {
+                Err(repair_metrics_error) => {
+                    let repair_metrics_error_message = repair_metrics_error.to_string();
                     cloned_main_window_for_repair_styles
-                        .post_deferred_error(repair_error.to_string());
+                        .post_deferred_error(repair_metrics_error_message);
                 }
             }
 
@@ -159,9 +161,14 @@ fn apply_language_change(
     let mut config = AppConfig::load();
     config.language = language;
 
-    if let Err(save_error) = config.save() {
-        let error_message = t!("CONFIG_SAVE_FAILED", save_error = save_error).to_string();
-        main_window_instance.post_deferred_error(error_message);
+    if let Err(config_save_error) = config.save() {
+        let config_save_error_message = config_save_error.to_string();
+        let deferred_error_message = t!(
+            "CONFIG_SAVE_FAILED",
+            error_message = config_save_error_message
+        )
+        .to_string();
+        main_window_instance.post_deferred_error(deferred_error_message);
     }
 
     Ok(())

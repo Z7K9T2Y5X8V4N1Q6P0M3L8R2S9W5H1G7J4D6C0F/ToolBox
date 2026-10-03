@@ -226,12 +226,13 @@ fn paint_marlett_arrow_on_header(
         &mut marlett_font_arrow_rect,
         co::DT::RIGHT | co::DT::VCENTER | co::DT::SINGLELINE,
     ) {
+        let draw_text_error_message = draw_text_error.to_string();
         log::error!(
             "{}",
             t!(
                 "ERROR_RENDER_SORT_INDICATOR_FAILED",
                 column_index = target_column_index,
-                error = draw_text_error
+                error_message = draw_text_error_message
             )
         );
     }

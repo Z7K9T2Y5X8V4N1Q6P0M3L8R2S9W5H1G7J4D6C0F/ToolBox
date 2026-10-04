@@ -33,12 +33,18 @@ const TARGET_METRICS_REGISTRY_SUBKEY_PATHS: &[&str] = &[
 /// Relative subkey path within the user profile hive containing classic visual appearance schemes.
 const APPEARANCE_SCHEMES_SUBKEY_PATH: &str = r"Control Panel\Appearance\Schemes";
 
-/// Restore default visual styles, system colors, and non-client metrics for the active user.
+/// Safely execute an operation against the mounted default template registry hive and active user hive.
 ///
-/// Copies `Default\NTUSER.DAT` to a temporary staging directory, mounts the replica into
-/// `HKEY_USERS`, purges existing configurations under the target keys, clones default entries
-/// into the active user's registry hive, and ensures clean unmounting on completion.
-pub fn apply_default_metrics() -> Result<()> {
+/// Discovers the system `Default\NTUSER.DAT`, mounts it into `HKEY_USERS` within an RAII guard,
+/// opens both the template root and the interactive user's root, and executes the provided closure.
+///
+/// # Lifetime and Handle Safety
+/// The closure operates inside an isolated lexical block so that all derived `RegKey` handles
+/// and borrow guards are dropped before [`LoadedHiveGuard`] executes `RegUnLoadKey`, strictly
+/// eliminating the risk of `ERROR_SHARING_VIOLATION` during hive unloading.
+fn with_mounted_template_hive<T>(
+    operation: impl FnOnce(&RegKey, &RegKey) -> Result<T>,
+) -> Result<T> {
     let default_hive_file_path = resolve_default_user_hive_path()?;
     let default_hive_file_path_string = default_hive_file_path.display().to_string();
     if !default_hive_file_path.exists() {
@@ -51,7 +57,6 @@ pub fn apply_default_metrics() -> Result<()> {
         );
     }
 
-    // 1. Copy and mount the offline Default NTUSER.DAT into HKEY_USERS
     let _loaded_hive_guard =
         LoadedHiveGuard::mount(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, &default_hive_file_path)
             .with_context(|| {
@@ -65,73 +70,51 @@ pub fn apply_default_metrics() -> Result<()> {
                 )
             })?;
 
-    // 2. Open registry roots. Because source_template_root_key and target_user_root_key
-    // are declared after _loaded_hive_guard, Rust's LIFO drop order guarantees that
-    // all open registry subkey handles are closed before _loaded_hive_guard calls RegUnLoadKey.
-    let users_root_key = RegKey::predef(HKEY_USERS);
-    let source_template_root_key = users_root_key
-        .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, KEY_READ)
-        .context(t!("ERROR_OPEN_MOUNTED_HIVE_FAILED"))?;
+    // Inner scope guarantees open registry handles are closed prior to LoadedHiveGuard drop.
+    let operation_result = {
+        let users_root_key = RegKey::predef(HKEY_USERS);
+        let source_template_root_key = users_root_key
+            .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, KEY_READ)
+            .context(t!("ERROR_OPEN_MOUNTED_HIVE_FAILED"))?;
 
-    let target_user_root_key = session::open_active_user_registry_root()?;
+        let target_user_root_key = session::open_active_user_registry_root()?;
 
-    // 3. Purge existing target keys and clone fresh contents
-    for relative_metrics_subkey_path in TARGET_METRICS_REGISTRY_SUBKEY_PATHS {
-        reset_active_user_subkey_from_mounted_template(
-            &source_template_root_key,
-            &target_user_root_key,
-            relative_metrics_subkey_path,
-        )?;
-    }
+        operation(&source_template_root_key, &target_user_root_key)
+    };
 
-    Ok(())
+    operation_result
+}
+
+/// Reset a series of subkeys in the active user's registry hive by cloning them from the mounted template.
+fn reset_active_user_subkeys_from_template(relative_target_subkey_paths: &[&str]) -> Result<()> {
+    with_mounted_template_hive(
+        |source_template_root_key, target_user_root_key| -> Result<()> {
+            for relative_target_subkey_path in relative_target_subkey_paths {
+                reset_active_user_subkey_from_mounted_template(
+                    source_template_root_key,
+                    target_user_root_key,
+                    relative_target_subkey_path,
+                )?;
+            }
+            Ok(())
+        },
+    )
+}
+
+/// Restore default visual styles, system colors, and non-client metrics for the active user.
+///
+/// Mounts the default template hive, purges existing metrics and appearance settings in the
+/// interactive user's profile, clones the original configurations, and cleanly unmounts the hive.
+pub fn apply_default_metrics() -> Result<()> {
+    reset_active_user_subkeys_from_template(TARGET_METRICS_REGISTRY_SUBKEY_PATHS)
 }
 
 /// Restore default classic visual appearance schemes for the active user.
 ///
-/// Copies `Default\NTUSER.DAT` to a temporary directory, mounts the replica into `HKEY_USERS`,
-/// purges existing configurations under `Control Panel\Appearance\Schemes`, clones default preset
-/// schemes into the active user's registry hive, and cleanly unmounts the temporary hive.
+/// Mounts the default template hive, purges existing entries under `Control Panel\Appearance\Schemes`,
+/// clones default preset schemes into the active user's hive, and cleanly unmounts the hive.
 pub fn restore_default_classic_schemes() -> Result<()> {
-    let default_hive_file_path = resolve_default_user_hive_path()?;
-    let default_hive_file_path_string = default_hive_file_path.display().to_string();
-    if !default_hive_file_path.exists() {
-        bail!(
-            "{}",
-            t!(
-                "ERROR_DEFAULT_HIVE_NOT_FOUND",
-                default_hive_file_path = default_hive_file_path_string
-            )
-        );
-    }
-
-    let _loaded_hive_guard =
-        LoadedHiveGuard::mount(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, &default_hive_file_path)
-            .with_context(|| {
-                format!(
-                    "{}: {}",
-                    t!(
-                        "ERROR_MOUNT_DEFAULT_HIVE_FAILED",
-                        default_hive_file_path = default_hive_file_path_string
-                    ),
-                    default_hive_file_path.display()
-                )
-            })?;
-
-    let users_root_key = RegKey::predef(HKEY_USERS);
-    let source_template_root_key = users_root_key
-        .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, KEY_READ)
-        .context(t!("ERROR_OPEN_MOUNTED_HIVE_FAILED"))?;
-
-    let target_user_root_key = session::open_active_user_registry_root()?;
-
-    reset_active_user_subkey_from_mounted_template(
-        &source_template_root_key,
-        &target_user_root_key,
-        APPEARANCE_SCHEMES_SUBKEY_PATH,
-    )?;
-
-    Ok(())
+    reset_active_user_subkeys_from_template(&[APPEARANCE_SCHEMES_SUBKEY_PATH])
 }
 
 /// Purge existing user configuration and clone fresh values from the mounted default user hive subkey.
@@ -217,13 +200,13 @@ pub fn add_extra_classic_schemes() -> Result<()> {
         })?;
 
     for &(scheme_target_value_name, scheme_payload_data) in schemes::get_extra_classic_schemes() {
-        let registry_value = RegValue {
+        let scheme_target_value_data = RegValue {
             vtype: RegType::REG_BINARY,
             bytes: Cow::Borrowed(scheme_payload_data),
         };
 
         schemes_target_subkey
-            .set_raw_value(scheme_target_value_name, &registry_value)
+            .set_raw_value(scheme_target_value_name, &scheme_target_value_data)
             .with_context(|| {
                 t!(
                     "ERROR_REGISTRY_SET_VALUE_FAILED",

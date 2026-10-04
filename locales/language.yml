@@ -386,3 +386,23 @@ ERROR_OPEN_DEFAULT_HIVE_SUBKEY_FAILED:
 ERROR_OPEN_ACTIVE_USER_SUBKEY_FAILED:
   en-US: "Failed to open active user registry branch: %{subkey_path}"
   zh-CN: "打开当前用户注册表必须分支失败：%{subkey_path}"
+
+ERROR_WINDOW_MENU_ALREADY_ATTACHED:
+  en-US: "Menu handle has already been attached to a window"
+  zh-CN: "菜单句柄已经被挂载至窗口"
+
+ERROR_WINDOW_SET_MENU_FAILED:
+  en-US: "Failed to attach menu bar to target window"
+  zh-CN: "挂载菜单栏到目标窗口失败"
+
+ERROR_WINDOW_DESTROY_MENU_FAILED:
+  en-US: "Failed to destroy detached menu handle"
+  zh-CN: "销毁已脱钩的菜单句柄失败"
+
+ERROR_WINDOW_CREATE_MENU_FAILED:
+  en-US: "Failed to create menu handle"
+  zh-CN: "创建菜单句柄失败"
+
+ERROR_WINDOW_APPEND_MENU_FAILED:
+  en-US: "Failed to append menu item or submenu"
+  zh-CN: "追加菜单项或子菜单失败"

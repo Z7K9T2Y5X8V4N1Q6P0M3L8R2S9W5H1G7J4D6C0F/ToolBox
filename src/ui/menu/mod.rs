@@ -9,9 +9,9 @@
 //! - [`build`] — constructs and rebuilds the [`winsafe::HMENU`] tree
 //! - [`event`] — registers WM_COMMAND handlers on [`crate::app::MainWindow`]
 
-mod build;
+pub(crate) mod build;
 mod event;
 pub mod state;
 
-pub use build::build_main_menu;
+pub use build::{UnattachedMenuGuard, build_main_menu};
 pub use event::register_menu_events;

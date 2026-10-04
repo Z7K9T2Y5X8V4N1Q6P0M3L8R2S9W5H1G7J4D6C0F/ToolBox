@@ -52,7 +52,7 @@ extern "system" fn ui_customization_hook_procedure(
                     call_window_procedure_struct.hwnd,
                     DWMWA_TRANSITIONS_FORCEDISABLED,
                     ptr::from_ref(&TRUE).cast(),
-                    size_of::<BOOL>() as u32,
+                    size_of::<BOOL>() as _,
                 )
             };
 

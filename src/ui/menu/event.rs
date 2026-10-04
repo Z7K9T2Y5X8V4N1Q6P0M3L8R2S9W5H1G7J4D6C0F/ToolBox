@@ -123,10 +123,39 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         },
     );
 
-    main_window_instance
-        .main_window
-        .on()
-        .wm_command_acc_menu(IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, move || Ok(()));
+    let cloned_main_window_for_add_extra_schemes = main_window_instance.clone();
+    main_window_instance.main_window.on().wm_command_acc_menu(
+        IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
+        move || {
+            let main_window_hwnd = cloned_main_window_for_add_extra_schemes.main_window.hwnd();
+            let confirmation = dialog::prompt_confirmation_dialog(
+                Some(main_window_hwnd),
+                &t!("MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES"),
+                &t!("CONFIRM_ADD_EXTRA_CLASSIC_VISUAL_STYLES_MESSAGE"),
+            )?;
+
+            if confirmation != UserConfirmationOutcome::Confirmed {
+                return Ok(());
+            }
+
+            match desktop::theme::add_extra_classic_schemes() {
+                Ok(()) => {
+                    dialog::show_info_dialog(
+                        Some(main_window_hwnd),
+                        &t!("MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES"),
+                        &t!("ADD_EXTRA_CLASSIC_VISUAL_STYLES_SUCCESS"),
+                    )?;
+                }
+                Err(add_extra_schemes_error) => {
+                    let add_extra_schemes_error_message = add_extra_schemes_error.to_string();
+                    cloned_main_window_for_add_extra_schemes
+                        .post_deferred_error(add_extra_schemes_error_message);
+                }
+            }
+
+            Ok(())
+        },
+    );
 
     main_window_instance
         .main_window

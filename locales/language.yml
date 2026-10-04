@@ -312,20 +312,28 @@ ERROR_TERMINATE_SHELL_PROCESS_FAILED:
   zh-CN: "终止外壳进程（PID: %{shell_process_id}）失败"
 
 CONFIRM_REPAIR_VISUAL_STYLES_MESSAGE:
-  en-US: "This action will restore default Windows 10 window metrics, fonts, and color appearance to resolve visual anomalies (such as distorted title bars, broken control sizing, and incorrect colors)\n\nThis action cannot be undone. Do you want to continue?"
-  zh-CN: "此操作将恢复 Windows 10 默认的窗口度量、字体与配色方案，以解决显示异常 (如标题栏高度失常、控件及字体尺寸失调、窗口配色错误等问题)\n\n此操作不可逆，是否继续？"
+  en-US: "This action will restore default window metrics, fonts, and color appearance to resolve visual anomalies (such as distorted title bars, broken control sizing, and incorrect colors)\nThis action cannot be undone. Do you want to continue?"
+  zh-CN: "此操作将恢复系统默认的窗口度量、字体与配色方案，以解决显示异常 (如标题栏高度失常、控件及字体尺寸失调、窗口配色错误等问题)\n此操作不可逆，是否继续?"
 
 REPAIR_VISUAL_STYLES_SUCCESS:
   en-US: "Default visual styles have been restored successfully\nPlease sign out or restart your system for the changes to take full effect"
   zh-CN: "视觉样式已成功恢复为默认设置\n请注销或重启系统以使其完全生效"
 
 CONFIRM_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES_MESSAGE:
-  en-US: "This action will restore default Windows Classic visual appearance schemes (including standard Windows Classic and high-contrast presets)\n\nThis action cannot be undone. Do you want to continue?"
-  zh-CN: "此操作将恢复系统默认经典视觉外观方案 (包含 Windows 经典及高对比度预设方案)\n\n此操作不可逆，是否继续？"
+  en-US: "This action will restore default Windows Classic visual appearance schemes (including standard Windows Classic and high-contrast presets)\nThis action cannot be undone. Do you want to continue?"
+  zh-CN: "此操作将恢复系统默认经典视觉外观方案 (包含 Windows 经典及高对比度预设方案)\n此操作不可逆，是否继续?"
 
 RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES_SUCCESS:
   en-US: "Default classic visual appearance schemes have been restored successfully"
   zh-CN: "已成功恢复默认经典视觉样式方案"
+
+CONFIRM_ADD_EXTRA_CLASSIC_VISUAL_STYLES_MESSAGE:
+  en-US: "This action will add extra Windows Classic visual appearance schemes to your user profile\nThis action cannot be undone. Do you want to continue?"
+  zh-CN: "此操作将向当前用户配置添加额外的经典视觉外观方案\n此操作不可逆，是否继续?"
+
+ADD_EXTRA_CLASSIC_VISUAL_STYLES_SUCCESS:
+  en-US: "Extra classic visual appearance schemes have been added successfully"
+  zh-CN: "已成功添加额外经典视觉外观方案"
 
 ERROR_FAILED_TO_RESOLVE_USER_SID:
   en-US: "Failed to resolve active user SID from session token"

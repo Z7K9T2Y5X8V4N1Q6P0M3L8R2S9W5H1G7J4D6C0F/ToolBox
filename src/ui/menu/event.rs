@@ -43,7 +43,7 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
                 return Ok(());
             }
 
-            if let Err(restart_shell_error) = desktop::restart_desktop_shell() {
+            if let Err(restart_shell_error) = desktop::shell::restart_desktop_shell() {
                 let restart_shell_error_message = restart_shell_error.to_string();
                 cloned_main_window_for_restart_explorer
                     .post_deferred_error(restart_shell_error_message);
@@ -87,9 +87,40 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         },
     );
 
+    let cloned_main_window_for_restore_classic_schemes = main_window_instance.clone();
     main_window_instance.main_window.on().wm_command_acc_menu(
         IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
-        move || Ok(()),
+        move || {
+            let main_window_hwnd = cloned_main_window_for_restore_classic_schemes
+                .main_window
+                .hwnd();
+            let confirmation = dialog::prompt_confirmation_dialog(
+                Some(main_window_hwnd),
+                &t!("MENU_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES"),
+                &t!("CONFIRM_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES_MESSAGE"),
+            )?;
+
+            if confirmation != UserConfirmationOutcome::Confirmed {
+                return Ok(());
+            }
+
+            match desktop::theme::restore_default_classic_schemes() {
+                Ok(()) => {
+                    dialog::show_info_dialog(
+                        Some(main_window_hwnd),
+                        &t!("MENU_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES"),
+                        &t!("RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES_SUCCESS"),
+                    )?;
+                }
+                Err(restore_schemes_error) => {
+                    let restore_schemes_error_message = restore_schemes_error.to_string();
+                    cloned_main_window_for_restore_classic_schemes
+                        .post_deferred_error(restore_schemes_error_message);
+                }
+            }
+
+            Ok(())
+        },
     );
 
     main_window_instance

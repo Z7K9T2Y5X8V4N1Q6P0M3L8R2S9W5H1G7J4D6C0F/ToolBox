@@ -5,4 +5,4 @@
 
 pub mod registry;
 
-pub use registry::apply_default_metrics;
+pub use registry::{apply_default_metrics, restore_default_classic_schemes};

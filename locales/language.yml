@@ -319,6 +319,14 @@ REPAIR_VISUAL_STYLES_SUCCESS:
   en-US: "Default visual styles have been restored successfully\nPlease sign out or restart your system for the changes to take full effect"
   zh-CN: "视觉样式已成功恢复为默认设置\n请注销或重启系统以使其完全生效"
 
+CONFIRM_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES_MESSAGE:
+  en-US: "This action will restore default Windows Classic visual appearance schemes (including standard Windows Classic and high-contrast presets)\n\nThis action cannot be undone. Do you want to continue?"
+  zh-CN: "此操作将恢复系统默认经典视觉外观方案 (包含 Windows 经典及高对比度预设方案)\n\n此操作不可逆，是否继续？"
+
+RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES_SUCCESS:
+  en-US: "Default classic visual appearance schemes have been restored successfully"
+  zh-CN: "已成功恢复默认经典视觉样式方案"
+
 ERROR_FAILED_TO_RESOLVE_USER_SID:
   en-US: "Failed to resolve active user SID from session token"
   zh-CN: "无法从会话令牌解析当前用户的 SID"

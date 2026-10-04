@@ -23,15 +23,18 @@ use winsafe::{ExpandEnvironmentStrings, HKEY, SHGetKnownFolderPath, co};
 use crate::desktop::session;
 
 /// Unique subkey name under `HKEY_USERS` used for mounting the default user profile hive temporarily.
-const TEMPORARY_DEFAULT_HIVE_SUBKEY: &str =
+const TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME: &str =
     "Z7K9T2Y5X8V4N1Q6P0M3L8R2S9W5H1G7J4D6C0F.Toolbox.TemporaryDefaultUserHiveMount";
 
-/// Relative paths within the user profile hive that must be cloned.
-const TARGET_REGISTRY_SUBKEYS: &[&str] = &[
+/// Relative subkey paths within the user profile hive that must be cloned for metrics restoration.
+const TARGET_METRICS_REGISTRY_SUBKEY_PATHS: &[&str] = &[
     r"Control Panel\Appearance",
     r"Control Panel\Colors",
     r"Control Panel\Desktop\WindowMetrics",
 ];
+
+/// Relative subkey path within the user profile hive containing classic visual appearance schemes.
+const APPEARANCE_SCHEMES_SUBKEY_PATH: &str = r"Control Panel\Appearance\Schemes";
 
 /// Registry path holding profile directory configurations.
 const PROFILE_LIST_REGISTRY_PATH: &str =
@@ -62,7 +65,7 @@ impl LoadedHiveGuard {
             .map_or(1_145_140_000_000, |duration| duration.as_millis());
 
         let temporary_directory_name =
-            format!("{TEMPORARY_DEFAULT_HIVE_SUBKEY}.{current_process_id}{timestamp_millis}");
+            format!("{TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME}.{current_process_id}{timestamp_millis}");
         let temporary_directory_path = std::env::temp_dir().join(temporary_directory_name);
 
         fs::create_dir_all(&temporary_directory_path).context(t!(
@@ -132,7 +135,7 @@ pub fn apply_default_metrics() -> Result<()> {
 
     // 1. Copy and mount the offline Default NTUSER.DAT into HKEY_USERS
     let _loaded_hive_guard =
-        LoadedHiveGuard::load(TEMPORARY_DEFAULT_HIVE_SUBKEY, &default_hive_file_path)
+        LoadedHiveGuard::load(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, &default_hive_file_path)
             .with_context(|| {
                 format!(
                     "{}: {}",
@@ -149,14 +152,14 @@ pub fn apply_default_metrics() -> Result<()> {
     // all open registry subkey handles are closed before _loaded_hive_guard calls RegUnLoadKey.
     let users_root_key = RegKey::predef(HKEY_USERS);
     let mounted_template_root_key = users_root_key
-        .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY, KEY_READ)
+        .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, KEY_READ)
         .context(t!("ERROR_OPEN_MOUNTED_HIVE_FAILED"))?;
 
     let active_user_root_key = session::open_active_user_registry_root()?;
 
     // 3. Purge existing target keys and clone fresh contents
-    for relative_metrics_subkey_path in TARGET_REGISTRY_SUBKEYS {
-        reset_active_user_metrics_subkey_from_mounted_template(
+    for relative_metrics_subkey_path in TARGET_METRICS_REGISTRY_SUBKEY_PATHS {
+        reset_active_user_subkey_from_mounted_template(
             &mounted_template_root_key,
             &active_user_root_key,
             relative_metrics_subkey_path,
@@ -166,61 +169,108 @@ pub fn apply_default_metrics() -> Result<()> {
     Ok(())
 }
 
-/// Purge existing user configuration and clone fresh metric values from the mounted default user hive.
-fn reset_active_user_metrics_subkey_from_mounted_template(
-    mounted_template_root_key: &RegKey,
-    active_user_root_key: &RegKey,
-    relative_metrics_subkey_path: &str,
+/// Restore default classic visual appearance schemes for the active user.
+///
+/// Copies `Default\NTUSER.DAT` to a temporary directory, mounts the replica into `HKEY_USERS`,
+/// purges existing configurations under `Control Panel\Appearance\Schemes`, clones default preset
+/// schemes into the active user's registry hive, and cleanly unmounts the temporary hive.
+pub fn restore_default_classic_schemes() -> Result<()> {
+    let default_hive_file_path = resolve_default_user_hive_path()?;
+    let default_hive_file_path_string = default_hive_file_path.display().to_string();
+    if !default_hive_file_path.exists() {
+        bail!(
+            "{}",
+            t!(
+                "ERROR_DEFAULT_HIVE_NOT_FOUND",
+                default_hive_file_path = default_hive_file_path_string
+            )
+        );
+    }
+
+    let _loaded_hive_guard =
+        LoadedHiveGuard::load(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, &default_hive_file_path)
+            .with_context(|| {
+                format!(
+                    "{}: {}",
+                    t!(
+                        "ERROR_MOUNT_DEFAULT_HIVE_FAILED",
+                        default_hive_file_path = default_hive_file_path_string
+                    ),
+                    default_hive_file_path.display()
+                )
+            })?;
+
+    let users_root_key = RegKey::predef(HKEY_USERS);
+    let mounted_template_root_key = users_root_key
+        .open_subkey_with_flags(TEMPORARY_DEFAULT_HIVE_SUBKEY_NAME, KEY_READ)
+        .context(t!("ERROR_OPEN_MOUNTED_HIVE_FAILED"))?;
+
+    let active_user_root_key = session::open_active_user_registry_root()?;
+
+    reset_active_user_subkey_from_mounted_template(
+        &mounted_template_root_key,
+        &active_user_root_key,
+        APPEARANCE_SCHEMES_SUBKEY_PATH,
+    )?;
+
+    Ok(())
+}
+
+/// Purge existing user configuration and clone fresh values from the mounted default user hive subkey.
+fn reset_active_user_subkey_from_mounted_template(
+    source_template_root_key: &RegKey,
+    target_user_root_key: &RegKey,
+    relative_target_subkey_path: &str,
 ) -> Result<()> {
-    let mounted_template_metrics_subkey = mounted_template_root_key
-        .open_subkey_with_flags(relative_metrics_subkey_path, KEY_READ)
+    let source_template_subkey = source_template_root_key
+        .open_subkey_with_flags(relative_target_subkey_path, KEY_READ)
         .with_context(|| {
             t!(
                 "ERROR_OPEN_DEFAULT_HIVE_SUBKEY_FAILED",
-                subkey_path = relative_metrics_subkey_path
+                subkey_path = relative_target_subkey_path
             )
         })?;
 
-    let active_user_metrics_subkey = active_user_root_key
-        .open_subkey_with_flags(relative_metrics_subkey_path, KEY_ALL_ACCESS)
+    let (target_user_subkey, _disposition) = target_user_root_key
+        .create_subkey_with_flags(relative_target_subkey_path, KEY_ALL_ACCESS)
         .with_context(|| {
             t!(
                 "ERROR_OPEN_ACTIVE_USER_SUBKEY_FAILED",
-                subkey_path = relative_metrics_subkey_path
+                subkey_path = relative_target_subkey_path
             )
         })?;
 
-    // Step 1: Collect and delete all existing values under the target user's metrics subkey
-    let active_user_existing_metrics_value_names: Vec<String> = active_user_metrics_subkey
+    // Step 1: Collect and delete all existing values under the target user's subkey
+    let target_user_existing_value_names: Vec<String> = target_user_subkey
         .enum_values()
         .filter_map(|registry_value_entry_result| {
-            registry_value_entry_result.ok().map(
-                |(active_user_metric_value_name, _metric_value_data)| active_user_metric_value_name,
-            )
+            registry_value_entry_result
+                .ok()
+                .map(|(existing_value_name, _existing_value_data)| existing_value_name)
         })
         .collect();
 
-    for active_user_existing_metrics_value_name in active_user_existing_metrics_value_names {
-        active_user_metrics_subkey
-            .delete_value(&active_user_existing_metrics_value_name)
+    for target_user_existing_value_name in target_user_existing_value_names {
+        target_user_subkey
+            .delete_value(&target_user_existing_value_name)
             .with_context(|| {
                 t!(
                     "ERROR_REGISTRY_DELETE_VALUE_FAILED",
-                    value_name = active_user_existing_metrics_value_name
+                    value_name = target_user_existing_value_name
                 )
             })?;
     }
 
-    // Step 2: Clone all values from the source default template subkey
-    for enum_result in mounted_template_metrics_subkey.enum_values() {
+    // Step 2: Clone all values from the source template subkey
+    for enum_result in source_template_subkey.enum_values() {
         let (source_value_name, source_value_data) = enum_result.with_context(|| {
             t!(
                 "ERROR_REGISTRY_ENUM_VALUES_FAILED",
-                subkey_path = relative_metrics_subkey_path
+                subkey_path = relative_target_subkey_path
             )
         })?;
 
-        active_user_metrics_subkey
+        target_user_subkey
             .set_raw_value(&source_value_name, &source_value_data)
             .with_context(|| {
                 t!(

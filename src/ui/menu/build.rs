@@ -4,19 +4,17 @@
 //! complete leak prevention during creation failures, alongside clean menu bar replacement
 //! and non-client metric synchronization.
 
-use std::ops::Deref;
-
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use windows::Win32::{Foundation::HWND as RawHwnd, UI::WindowsAndMessaging::DrawMenuBar};
 use winsafe::{BmpPtrStr, HMENU, HWND, IdMenu, MenuItem, co};
 
 use super::state::{
-    IDM_LANG_EN_US, IDM_LANG_ZH_CN, IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES,
-    IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT, IDM_OPTIONS_RESTART_EXPLORER,
-    IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
-    IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+    IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
+    IDM_OPTIONS_RESTART_EXPLORER, IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
+    IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
 };
+use crate::config::AppLanguage;
 
 /// RAII scope guard holding an unattached [`HMENU`] handle.
 ///
@@ -169,32 +167,35 @@ fn create_options_popup_menu() -> Result<UnattachedMenuGuard> {
     Ok(options_popup_menu_guard)
 }
 
+/// Determine the menu item state flags based on whether the item matches the active language.
+fn resolve_language_menu_item_flags(is_active_language: bool) -> co::MF {
+    if is_active_language {
+        co::MF::STRING | co::MF::CHECKED | co::MF::GRAYED
+    } else {
+        co::MF::STRING
+    }
+}
+
 /// Build the Language submenu wrapped in an RAII guard.
 fn create_language_popup_menu() -> Result<UnattachedMenuGuard> {
     let language_popup_menu_handle =
         HMENU::CreatePopupMenu().context(t!("ERROR_WINDOW_CREATE_MENU_FAILED"))?;
     let language_popup_menu_guard = UnattachedMenuGuard::new(language_popup_menu_handle);
-    let current_locale = rust_i18n::locale();
+    let popup_menu_handle = language_popup_menu_guard.handle()?;
 
-    let languages = [
-        (IDM_LANG_EN_US, "English", "en-US"),
-        (IDM_LANG_ZH_CN, "简体中文", "zh-CN"),
-    ];
+    let current_locale_str = rust_i18n::locale();
+    let current_active_language =
+        AppLanguage::from_locale_str(&current_locale_str).unwrap_or(AppLanguage::EnUs);
 
-    for (menu_command_id, display_text, locale) in languages {
-        let is_active_locale = current_locale.deref() == locale;
-        let menu_item_flags = if is_active_locale {
-            co::MF::STRING | co::MF::CHECKED | co::MF::GRAYED
-        } else {
-            co::MF::STRING
-        };
+    for target_candidate_language in AppLanguage::all() {
+        let is_active_language = *target_candidate_language == current_active_language;
+        let menu_item_flags = resolve_language_menu_item_flags(is_active_language);
 
-        language_popup_menu_guard
-            .handle()?
+        popup_menu_handle
             .AppendMenu(
                 menu_item_flags,
-                IdMenu::Id(menu_command_id),
-                BmpPtrStr::from_str(display_text),
+                IdMenu::Id(target_candidate_language.menu_command_id()),
+                BmpPtrStr::from_str(target_candidate_language.native_display_name()),
             )
             .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
     }

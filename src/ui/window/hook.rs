@@ -44,7 +44,6 @@ extern "system" fn ui_customization_hook_procedure(
 ) -> LRESULT {
     if hook_code >= 0 {
         let call_window_procedure_struct = unsafe { &*(lparam.0 as *const CWPSTRUCT) };
-
         if call_window_procedure_struct.message == WM_CREATE {
             // Disable the DWM fade-in transition for this window.
             let _ = unsafe {

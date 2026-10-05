@@ -22,8 +22,8 @@ use crate::config::AppLanguage;
 /// menu are owned by the process. If an error occurs prior to mounting, this guard
 /// invokes [`HMENU::DestroyMenu`] upon drop to prevent GDI/User handle leaks.
 ///
-/// Once ownership has been transferred to a window or a parent menu, the guard can be
-/// disarmed via [`UnattachedMenuGuard::into_raw`] or attached atomically via
+/// Once ownership has been transferred to a window or a parent menu, the guard is
+/// consumed via [`UnattachedMenuGuard::append_submenu`] or
 /// [`UnattachedMenuGuard::attach_to_window`].
 pub struct UnattachedMenuGuard {
     menu_handle: Option<HMENU>,
@@ -44,14 +44,26 @@ impl UnattachedMenuGuard {
             .context(t!("ERROR_WINDOW_MENU_ALREADY_ATTACHED"))
     }
 
-    /// Disarm the guard and extract the inner [`HMENU`] handle without destroying it.
+    /// Append a child popup submenu to this menu, transferring its ownership into the menu tree.
     ///
-    /// Must only be called when ownership has been successfully transferred to an external
-    /// owner (such as a parent menu).
-    pub fn into_raw(mut self) -> Result<HMENU> {
-        self.menu_handle
-            .take()
-            .context(t!("ERROR_WINDOW_MENU_ALREADY_ATTACHED"))
+    /// Consumes the child `submenu_guard` by value. If the Win32 append operation succeeds,
+    /// ownership of the submenu handle is permanently assumed by Windows (parent menu),
+    /// and the child guard is cleanly disarmed without triggering destruction.
+    pub fn append_submenu(&self, text: &str, mut submenu_guard: Self) -> Result<()> {
+        let parent_menu_handle = self.handle()?;
+        let child_menu_handle = submenu_guard.handle()?;
+
+        parent_menu_handle
+            .append_item(&[MenuItem::Submenu {
+                submenu: child_menu_handle,
+                text,
+            }])
+            .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
+
+        // Mounting succeeded: disarm the child guard so Windows owns the child menu.
+        let _ = submenu_guard.menu_handle.take();
+
+        Ok(())
     }
 
     /// Atomically transfer ownership of this menu to the specified window.
@@ -103,24 +115,9 @@ pub fn build_main_menu() -> Result<UnattachedMenuGuard> {
     let options_popup_menu_guard = create_options_popup_menu()?;
     let language_popup_menu_guard = create_language_popup_menu()?;
 
-    root_menu_bar_guard
-        .handle()?
-        .append_item(&[
-            MenuItem::Submenu {
-                submenu: options_popup_menu_guard.handle()?,
-                text: &t!("MENU_OPTIONS"),
-            },
-            MenuItem::Submenu {
-                submenu: language_popup_menu_guard.handle()?,
-                text: &t!("MENU_LANGUAGE"),
-            },
-        ])
-        .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
-
-    // Submenus are now firmly embedded in the root menu tree; disarm their guards
-    // so they are not destroyed upon exiting this scope.
-    let _ = options_popup_menu_guard.into_raw()?;
-    let _ = language_popup_menu_guard.into_raw()?;
+    // Ownership of both submenus is transferred by value directly into root_menu_bar_guard.
+    root_menu_bar_guard.append_submenu(&t!("MENU_OPTIONS"), options_popup_menu_guard)?;
+    root_menu_bar_guard.append_submenu(&t!("MENU_LANGUAGE"), language_popup_menu_guard)?;
 
     Ok(root_menu_bar_guard)
 }

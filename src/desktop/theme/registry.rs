@@ -46,13 +46,13 @@ fn with_mounted_template_hive<T>(
     operation: impl FnOnce(&RegKey, &RegKey) -> Result<T>,
 ) -> Result<T> {
     let default_hive_file_path = resolve_default_user_hive_path()?;
-    let default_hive_file_path_string = default_hive_file_path.display().to_string();
+    let default_hive_display_path = default_hive_file_path.display().to_string();
     if !default_hive_file_path.exists() {
         bail!(
             "{}",
             t!(
                 "ERROR_DEFAULT_HIVE_NOT_FOUND",
-                default_hive_file_path = default_hive_file_path_string
+                default_hive_file_path = default_hive_display_path
             )
         );
     }
@@ -64,7 +64,7 @@ fn with_mounted_template_hive<T>(
                     "{}: {}",
                     t!(
                         "ERROR_MOUNT_DEFAULT_HIVE_FAILED",
-                        default_hive_file_path = default_hive_file_path_string
+                        default_hive_file_path = default_hive_display_path
                     ),
                     default_hive_file_path.display()
                 )

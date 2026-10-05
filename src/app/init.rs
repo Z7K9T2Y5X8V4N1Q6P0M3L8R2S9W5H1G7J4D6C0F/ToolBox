@@ -40,7 +40,7 @@ pub fn initialize_application() {
 /// in the user's system language rather than falling back to the hardcoded compile-time default.
 fn setup_early_system_locale() {
     let system_language = AppLanguage::detect_from_system();
-    rust_i18n::set_locale(system_language.as_locale_str());
+    rust_i18n::set_locale(system_language.as_locale_tag());
 }
 
 /// Override the early locale with the user's saved preference from the configuration file.
@@ -50,5 +50,5 @@ fn setup_early_system_locale() {
 /// runs, user-saved preferences take precedence.
 fn setup_persisted_config_locale() {
     let app_config = AppConfig::load();
-    rust_i18n::set_locale(app_config.language.as_locale_str());
+    rust_i18n::set_locale(app_config.language.as_locale_tag());
 }

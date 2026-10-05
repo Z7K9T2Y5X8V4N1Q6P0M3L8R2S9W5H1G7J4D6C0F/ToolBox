@@ -170,7 +170,7 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         register_language_menu_handler(
             main_window_instance,
             target_language.menu_command_id(),
-            target_language.as_locale_str(),
+            target_language.as_locale_tag(),
             target_language,
         );
     }
@@ -180,7 +180,7 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
 fn register_language_menu_handler(
     main_window_instance: &MainWindow,
     menu_command_id: u16,
-    locale_string: &'static str,
+    locale_tag: &'static str,
     target_language: AppLanguage,
 ) {
     let cloned_main_window_instance = main_window_instance.clone();
@@ -188,7 +188,7 @@ fn register_language_menu_handler(
         .main_window
         .on()
         .wm_command_acc_menu(menu_command_id, move || {
-            apply_language_change(&cloned_main_window_instance, locale_string, target_language)
+            apply_language_change(&cloned_main_window_instance, locale_tag, target_language)
         });
 }
 
@@ -206,10 +206,10 @@ fn register_language_menu_handler(
 /// This avoids reentrancy issues that can occur when a modal dialog is opened inside a menu handler.
 fn apply_language_change(
     main_window_instance: &MainWindow,
-    locale: &str,
+    locale_tag: &str,
     language: AppLanguage,
 ) -> AnyResult<()> {
-    rust_i18n::set_locale(locale);
+    rust_i18n::set_locale(locale_tag);
 
     let main_window_hwnd = main_window_instance.main_window.hwnd();
     super::build::rebuild_main_menu(&main_window_hwnd)?;

@@ -89,8 +89,8 @@ impl UnattachedMenuGuard {
                 .context(t!("ERROR_WINDOW_DESTROY_MENU_FAILED"))?;
         }
 
-        let raw_window_handle = RawHwnd(target_window_hwnd.ptr());
-        let _ = unsafe { DrawMenuBar(raw_window_handle) };
+        let target_window_raw_hwnd = RawHwnd(target_window_hwnd.ptr());
+        let _ = unsafe { DrawMenuBar(target_window_raw_hwnd) };
 
         Ok(())
     }
@@ -180,19 +180,19 @@ fn create_language_popup_menu() -> Result<UnattachedMenuGuard> {
     let language_popup_menu_guard = UnattachedMenuGuard::new(language_popup_menu_handle);
     let popup_menu_handle = language_popup_menu_guard.handle()?;
 
-    let current_locale_str = rust_i18n::locale();
+    let current_locale_tag = rust_i18n::locale();
     let current_active_language =
-        AppLanguage::from_locale_str(&current_locale_str).unwrap_or(AppLanguage::EnUs);
+        AppLanguage::from_locale_tag(&current_locale_tag).unwrap_or(AppLanguage::EnUs);
 
-    for target_candidate_language in AppLanguage::all() {
-        let is_active_language = *target_candidate_language == current_active_language;
+    for supported_language in AppLanguage::all() {
+        let is_active_language = *supported_language == current_active_language;
         let menu_item_flags = resolve_language_menu_item_flags(is_active_language);
 
         popup_menu_handle
             .AppendMenu(
                 menu_item_flags,
-                IdMenu::Id(target_candidate_language.menu_command_id()),
-                BmpPtrStr::from_str(target_candidate_language.native_display_name()),
+                IdMenu::Id(supported_language.menu_command_id()),
+                BmpPtrStr::from_str(supported_language.native_display_name()),
             )
             .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
     }

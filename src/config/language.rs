@@ -32,8 +32,8 @@ impl AppLanguage {
     /// Resolve an [`AppLanguage`] from a BCP 47 locale string slice.
     ///
     /// Returns `None` if the locale string is not explicitly supported.
-    pub fn from_locale_str(locale_str: &str) -> Option<Self> {
-        match locale_str {
+    pub fn from_locale_tag(locale_tag: &str) -> Option<Self> {
+        match locale_tag {
             "zh-CN" => Some(Self::ZhCn),
             "en-US" => Some(Self::EnUs),
             _ => None,
@@ -48,18 +48,18 @@ impl AppLanguage {
     /// In all other cases (query failure, unsupported language codes, or partial
     /// variants), falls back to [`AppLanguage::EnUs`].
     pub fn detect_from_system() -> Self {
-        let Some(system_locale) = sys_locale::get_locale() else {
+        let Some(system_locale_tag) = sys_locale::get_locale() else {
             return Self::EnUs;
         };
 
-        Self::from_locale_str(&system_locale).unwrap_or(Self::EnUs)
+        Self::from_locale_tag(&system_locale_tag).unwrap_or(Self::EnUs)
     }
 
     /// Returns the BCP 47 locale string for this language.
     ///
     /// The returned value is suitable for passing directly to
     /// [`rust_i18n::set_locale`].
-    pub const fn as_locale_str(&self) -> &'static str {
+    pub const fn as_locale_tag(&self) -> &'static str {
         match self {
             Self::ZhCn => "zh-CN",
             Self::EnUs => "en-US",

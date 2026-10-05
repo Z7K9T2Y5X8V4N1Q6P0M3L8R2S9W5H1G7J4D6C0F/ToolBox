@@ -67,12 +67,12 @@ impl LoadedHiveGuard {
             config_path = temporary_hive_file_path.display().to_string()
         ))?;
 
-        let hive_path_string = temporary_hive_file_path
+        let temporary_hive_path_arg = temporary_hive_file_path
             .to_str()
             .context(t!("ERROR_RESOLVE_DEFAULT_PROFILE_PATH_FAILED"))?;
 
         HKEY::USERS
-            .RegLoadKey(Some(mounted_hive_subkey_name), hive_path_string)
+            .RegLoadKey(Some(mounted_hive_subkey_name), temporary_hive_path_arg)
             .map_err(|hive_load_error| anyhow!("{hive_load_error}"))?;
 
         Ok(Self {
@@ -160,12 +160,12 @@ fn query_default_profile_path_from_registry() -> Result<PathBuf> {
         .open_subkey_with_flags(PROFILE_LIST_REGISTRY_PATH, KEY_READ)
         .context(t!("ERROR_OPEN_PROFILE_LIST_KEY_FAILED"))?;
 
-    let default_profile_raw_string: String = profile_list_key
+    let unexpanded_profile_path: String = profile_list_key
         .get_value(DEFAULT_PROFILE_VALUE_NAME)
         .context(t!("ERROR_READ_DEFAULT_PROFILE_VALUE_FAILED"))?;
 
-    let expanded_profile_path_string =
-        ExpandEnvironmentStrings(&default_profile_raw_string).unwrap_or(default_profile_raw_string);
+    let expanded_profile_path =
+        ExpandEnvironmentStrings(&unexpanded_profile_path).unwrap_or(unexpanded_profile_path);
 
-    Ok(PathBuf::from(expanded_profile_path_string))
+    Ok(PathBuf::from(expanded_profile_path))
 }

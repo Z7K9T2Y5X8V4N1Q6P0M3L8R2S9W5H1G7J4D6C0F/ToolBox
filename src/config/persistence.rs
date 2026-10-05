@@ -119,12 +119,12 @@ impl AppConfig {
             return ConfigLoadResult::NotFound(Self::default());
         }
 
-        let raw_toml_content = match Self::read_config(&config_path) {
-            Ok(config_file_content) => config_file_content,
+        let raw_toml_text = match Self::read_config(&config_path) {
+            Ok(raw_toml_text) => raw_toml_text,
             Err(config_read_error) => return ConfigLoadResult::ParseFailed(config_read_error),
         };
 
-        match Self::parse_config(&raw_toml_content) {
+        match Self::parse_config(&raw_toml_text) {
             Ok(loaded_app_config) => ConfigLoadResult::Loaded(loaded_app_config),
             Err(config_parse_error) => ConfigLoadResult::ParseFailed(config_parse_error),
         }

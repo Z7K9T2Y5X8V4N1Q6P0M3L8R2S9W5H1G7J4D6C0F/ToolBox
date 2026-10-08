@@ -28,6 +28,7 @@ use crate::ui::window::layout::{self, apply_minimum_window_size};
 pub fn register_all_events(main_window_instance: &MainWindow) -> winsafe::AnyResult<()> {
     menu::register_menu_events(main_window_instance);
     register_window_create_event(main_window_instance);
+    register_window_destroy_event(main_window_instance);
     register_window_min_max_info_event(main_window_instance);
     register_window_size_event(main_window_instance);
     register_window_app_message_event(main_window_instance);
@@ -75,6 +76,14 @@ fn register_window_create_event(main_window_instance: &MainWindow) {
             .sync_system_font(main_window_hwnd)?;
 
         Ok(0)
+    });
+}
+
+/// On WM_DESTROY: ensure background watchers and modified window frames are fully restored.
+fn register_window_destroy_event(main_window_instance: &MainWindow) {
+    main_window_instance.main_window.on().wm_destroy(move || {
+        menu::cleanup_global_basic_styles();
+        Ok(())
     });
 }
 

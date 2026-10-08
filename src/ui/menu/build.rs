@@ -13,6 +13,7 @@ use super::state::{
     IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
     IDM_OPTIONS_RESTART_EXPLORER, IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
     IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+    is_global_basic_styles_active,
 };
 use crate::config::AppLanguage;
 
@@ -127,9 +128,9 @@ fn create_options_popup_menu() -> Result<UnattachedMenuGuard> {
     let options_popup_menu_handle =
         HMENU::CreatePopupMenu().context(t!("ERROR_WINDOW_CREATE_MENU_FAILED"))?;
     let options_popup_menu_guard = UnattachedMenuGuard::new(options_popup_menu_handle);
+    let popup_menu_handle = options_popup_menu_guard.handle()?;
 
-    options_popup_menu_guard
-        .handle()?
+    popup_menu_handle
         .append_item(&[
             MenuItem::Entry {
                 cmd_id: IDM_OPTIONS_RESTART_EXPLORER,
@@ -150,15 +151,29 @@ fn create_options_popup_menu() -> Result<UnattachedMenuGuard> {
                 text: &t!("MENU_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES"),
             },
             MenuItem::Separator,
-            MenuItem::Entry {
-                cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
-                text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES"),
-            },
-            MenuItem::Entry {
-                cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
-                text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES"),
-            },
         ])
+        .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
+
+    let is_basic_styles_active = is_global_basic_styles_active();
+    let basic_styles_menu_flags = if is_basic_styles_active {
+        co::MF::STRING | co::MF::CHECKED
+    } else {
+        co::MF::STRING | co::MF::UNCHECKED
+    };
+
+    popup_menu_handle
+        .AppendMenu(
+            basic_styles_menu_flags,
+            IdMenu::Id(IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES),
+            BmpPtrStr::from_str(&t!("MENU_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES")),
+        )
+        .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
+
+    popup_menu_handle
+        .append_item(&[MenuItem::Entry {
+            cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+            text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES"),
+        }])
         .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
 
     Ok(options_popup_menu_guard)

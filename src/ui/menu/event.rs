@@ -5,14 +5,14 @@
 
 use rust_i18n::t;
 use winsafe::{
-    AnyResult,
+    AnyResult, IdPos,
     prelude::{GuiEventsParent, GuiWindow},
 };
 
 use crate::{
     app::MainWindow,
     config::{AppConfig, AppLanguage},
-    desktop,
+    desktop::{self, theme::GlobalBasicStylesState},
     ui::dialog::{self, UserConfirmationOutcome},
 };
 
@@ -20,6 +20,7 @@ use super::state::{
     IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
     IDM_OPTIONS_RESTART_EXPLORER, IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
     IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+    toggle_global_basic_styles,
 };
 
 /// Register WM_COMMAND handlers for all menu items.
@@ -156,10 +157,29 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         },
     );
 
-    main_window_instance
-        .main_window
-        .on()
-        .wm_command_acc_menu(IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, move || Ok(()));
+    let cloned_main_window_for_basic_styles = main_window_instance.clone();
+    main_window_instance.main_window.on().wm_command_acc_menu(
+        IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES,
+        move || {
+            let main_window_hwnd = cloned_main_window_for_basic_styles.main_window.hwnd();
+            match toggle_global_basic_styles() {
+                Ok(new_state) => {
+                    let is_checked = new_state == GlobalBasicStylesState::Enabled;
+                    if let Some(menu_bar) = main_window_hwnd.GetMenu() {
+                        let _ = menu_bar.CheckMenuItem(
+                            IdPos::Id(IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES),
+                            is_checked,
+                        );
+                    }
+                }
+                Err(toggle_error) => {
+                    let toggle_error_message = toggle_error.to_string();
+                    cloned_main_window_for_basic_styles.post_deferred_error(toggle_error_message);
+                }
+            }
+            Ok(())
+        },
+    );
 
     main_window_instance
         .main_window
@@ -193,17 +213,6 @@ fn register_language_menu_handler(
 }
 
 /// Switch the application locale, rebuild all UI text, and persist the choice.
-///
-/// # Steps
-/// 1. Update the `rust_i18n` locale so all subsequent `t!()` calls use the new language.
-/// 2. Rebuild the menu bar so its labels are re-translated.
-/// 3. Update the window title and all tab/page text labels.
-/// 4. Save the new language preference to the config file.
-///
-/// # Error deferral
-/// If saving the config fails, the error is queued via
-/// [`MainWindow::post_deferred_error`] rather than showing a dialog immediately.
-/// This avoids reentrancy issues that can occur when a modal dialog is opened inside a menu handler.
 fn apply_language_change(
     main_window_instance: &MainWindow,
     locale_tag: &str,

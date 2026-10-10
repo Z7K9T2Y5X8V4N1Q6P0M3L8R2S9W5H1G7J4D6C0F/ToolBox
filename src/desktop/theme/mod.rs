@@ -6,12 +6,14 @@
 //! - [`hive`]     — offline default user profile hive path resolution and RAII mounting guard
 //! - [`registry`] — registry cloning engine and classic metrics/schemes restoration logic
 //! - [`schemes`]  — predefined classic desktop appearance binary payloads
+//! - [`security`] — low-level security and kernel object primitives
 
 pub mod basic;
 pub mod classic;
 pub mod hive;
 pub mod registry;
 pub mod schemes;
+pub(crate) mod security;
 
 pub use basic::{GlobalBasicStylesState, GlobalBasicStylesWatcher};
 pub use classic::{GlobalClassicStylesState, GlobalClassicStylesWatcher};

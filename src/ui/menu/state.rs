@@ -5,7 +5,10 @@
 //! - `1000–1999` — Options submenu
 //! - `2000–2999` — Language submenu
 
-use crate::desktop::theme::{GlobalBasicStylesState, GlobalBasicStylesWatcher};
+use crate::desktop::theme::{
+    GlobalBasicStylesState, GlobalBasicStylesWatcher, GlobalClassicStylesState,
+    GlobalClassicStylesWatcher,
+};
 use anyhow::{Context, Result};
 use std::sync::Mutex;
 
@@ -49,6 +52,11 @@ pub fn is_global_basic_styles_active() -> bool {
         })
 }
 
+/// Query whether the global classic visual style is currently active directly from the kernel DACL.
+pub fn is_global_classic_styles_active() -> bool {
+    GlobalClassicStylesWatcher::new().current_state() == GlobalClassicStylesState::Enabled
+}
+
 /// Toggle the global basic visual styles watcher and return the new state.
 pub fn toggle_global_basic_styles() -> Result<GlobalBasicStylesState> {
     let mut watcher_mutex_guard = GLOBAL_BASIC_STYLES_WATCHER
@@ -59,6 +67,11 @@ pub fn toggle_global_basic_styles() -> Result<GlobalBasicStylesState> {
     let basic_styles_watcher =
         watcher_mutex_guard.get_or_insert_with(GlobalBasicStylesWatcher::new);
     basic_styles_watcher.toggle()
+}
+
+/// Toggle the global classic visual styles mode based on live kernel security state.
+pub fn toggle_global_classic_styles() -> Result<GlobalClassicStylesState> {
+    GlobalClassicStylesWatcher::new().toggle()
 }
 
 /// Explicitly stop and dismantle the global basic styles watcher and restore all windows.
@@ -73,4 +86,9 @@ pub fn cleanup_global_basic_styles() {
     if let Some(mut basic_styles_watcher) = watcher_mutex_guard.take() {
         let _ = basic_styles_watcher.stop();
     }
+}
+
+/// Explicitly restore standard ThemeSection permissions and disable classic mode.
+pub fn cleanup_global_classic_styles() {
+    let _ = GlobalClassicStylesWatcher::new().disable();
 }

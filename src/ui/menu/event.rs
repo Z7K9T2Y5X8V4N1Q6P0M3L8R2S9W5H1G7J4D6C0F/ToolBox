@@ -12,7 +12,10 @@ use winsafe::{
 use crate::{
     app::MainWindow,
     config::{AppConfig, AppLanguage},
-    desktop::{self, theme::GlobalBasicStylesState},
+    desktop::{
+        self,
+        theme::{GlobalBasicStylesState, GlobalClassicStylesState},
+    },
     ui::dialog::{self, UserConfirmationOutcome},
 };
 
@@ -20,7 +23,7 @@ use super::state::{
     IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
     IDM_OPTIONS_RESTART_EXPLORER, IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
     IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
-    toggle_global_basic_styles,
+    toggle_global_basic_styles, toggle_global_classic_styles,
 };
 
 /// Register WM_COMMAND handlers for all menu items.
@@ -181,10 +184,29 @@ pub fn register_menu_events(main_window_instance: &MainWindow) {
         },
     );
 
-    main_window_instance
-        .main_window
-        .on()
-        .wm_command_acc_menu(IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES, move || Ok(()));
+    let cloned_main_window_for_classic_styles = main_window_instance.clone();
+    main_window_instance.main_window.on().wm_command_acc_menu(
+        IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
+        move || {
+            let main_window_hwnd = cloned_main_window_for_classic_styles.main_window.hwnd();
+            match toggle_global_classic_styles() {
+                Ok(new_state) => {
+                    let is_checked = new_state == GlobalClassicStylesState::Enabled;
+                    if let Some(menu_bar) = main_window_hwnd.GetMenu() {
+                        let _ = menu_bar.CheckMenuItem(
+                            IdPos::Id(IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES),
+                            is_checked,
+                        );
+                    }
+                }
+                Err(toggle_error) => {
+                    let toggle_error_message = toggle_error.to_string();
+                    cloned_main_window_for_classic_styles.post_deferred_error(toggle_error_message);
+                }
+            }
+            Ok(())
+        },
+    );
 
     for &target_language in AppLanguage::all() {
         register_language_menu_handler(

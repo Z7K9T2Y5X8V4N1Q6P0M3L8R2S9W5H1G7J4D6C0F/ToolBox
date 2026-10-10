@@ -83,6 +83,7 @@ fn register_window_create_event(main_window_instance: &MainWindow) {
 fn register_window_destroy_event(main_window_instance: &MainWindow) {
     main_window_instance.main_window.on().wm_destroy(move || {
         menu::cleanup_global_basic_styles();
+        menu::cleanup_global_classic_styles();
         Ok(())
     });
 }

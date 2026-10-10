@@ -15,4 +15,4 @@ pub mod state;
 
 pub use build::{UnattachedMenuGuard, build_main_menu};
 pub use event::register_menu_events;
-pub use state::cleanup_global_basic_styles;
+pub use state::{cleanup_global_basic_styles, cleanup_global_classic_styles};

@@ -13,7 +13,7 @@ use super::state::{
     IDM_OPTIONS_ADD_EXTRA_CLASSIC_VISUAL_STYLES, IDM_OPTIONS_REPAIR_VISUAL_STYLES_TO_DEFAULT,
     IDM_OPTIONS_RESTART_EXPLORER, IDM_OPTIONS_RESTORE_DEFAULT_CLASSIC_VISUAL_STYLES,
     IDM_OPTIONS_TOGGLE_GLOBAL_BASIC_STYLES, IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
-    is_global_basic_styles_active,
+    is_global_basic_styles_active, is_global_classic_styles_active,
 };
 use crate::config::AppLanguage;
 
@@ -169,11 +169,19 @@ fn create_options_popup_menu() -> Result<UnattachedMenuGuard> {
         )
         .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
 
+    let is_classic_styles_active = is_global_classic_styles_active();
+    let classic_styles_menu_flags = if is_classic_styles_active {
+        co::MF::STRING | co::MF::CHECKED
+    } else {
+        co::MF::STRING | co::MF::UNCHECKED
+    };
+
     popup_menu_handle
-        .append_item(&[MenuItem::Entry {
-            cmd_id: IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES,
-            text: &t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES"),
-        }])
+        .AppendMenu(
+            classic_styles_menu_flags,
+            IdMenu::Id(IDM_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES),
+            BmpPtrStr::from_str(&t!("MENU_OPTIONS_TOGGLE_GLOBAL_CLASSIC_STYLES")),
+        )
         .context(t!("ERROR_WINDOW_APPEND_MENU_FAILED"))?;
 
     Ok(options_popup_menu_guard)
